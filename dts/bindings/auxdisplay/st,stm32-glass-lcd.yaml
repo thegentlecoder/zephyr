@@ -1,0 +1,29 @@
+# Copyright (c) 2026 Your Name
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  STM32 Internal Segment LCD Controller (Glass Display Interface).
+  This binding describes the internal liquid crystal display controller peripheral 
+  present on STM32 microcontrollers, mapped to a 14-segment auxiliary text interface.
+
+compatible: "st,stm32-glass-lcd"
+
+include: [base.yaml, auxdisplay-device.yaml, pinctrl-device.yaml]
+
+properties:
+  reg:
+    required: true
+    description: Base address and length of the LCD peripheral register block.
+
+  clocks:
+    required: true
+    description: Phandle to the clock controller and clock gating information.
+
+  pinctrl-0:
+    required: true
+    description: Array of phandles to pin configuration nodes (COM/SEG lines via AF11).
+
+  pinctrl-names:
+    required: true
+    const:
+      - default
