@@ -36,10 +36,6 @@ LOG_MODULE_REGISTER(auxdisplay_stm32_glass_lcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
 #define LCD_RAM_REGISTER14              (0x0000000EU) /*!< LCD RAM Register 14 */
 #define LCD_RAM_REGISTER15              (0x0000000FU) /*!< LCD RAM Register 15 */
 
-#define ASCII_DOT                     0x2E  /* . */
-#define ASCII_DOUBLE_DOT              0x3A  /* : */
-#define ASCII_TRIPLE_DOT              0x3B  /* ; */
-
 #define ASCII_CHAR_0                  0x30  /* 0 */
 #define ASCII_CHAR_AT_SYMBOL          0x40  /* @ */
 #define ASCII_CHAR_LEFT_OPEN_BRACKET  0x5B  /* [ */
@@ -50,7 +46,45 @@ LOG_MODULE_REGISTER(auxdisplay_stm32_glass_lcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
 #define ASCII_CHAR_MU                 0xB5  /* µ */
 // Degree Sign or half percent is ASCII 0xB0
 #define ASCII_CHAR_DEGREE_SIGN        0xB0  /* ° */
+// All the segments in a position, but the dots.
 #define ASCII_CHAR_FULL               0xFF
+
+#define ASCII_DOT                     0x2E  /* . */
+#define ASCII_DOUBLE_DOT              0x3A  /* : */
+#define ASCII_TRIPLE_DOT              0x3B  /* ; */
+
+/* LCD bars are handled as 4 bits, from 0 to 15.
+ * Values from 0 to 9 are based on the '0' character.
+ * Values from 10 to 15 are based on the 'A' character. 
+ */
+enum lcd_bar_value
+{
+  LCD_BAR_OFF  = 0x0,
+  LCD_BAR_0 = LCD_BAR_OFF,			/* 0 */
+  LCD_BAR_EMPTY = LCD_BAR_0,
+  LCD_BAR_0_PERC = LCD_BAR_0,
+  LCD_BAR_1,						/* 1 */
+  LCD_BAR_25_PERC = LCD_BAR_1,
+  LCD_BAR_2,						/* 2 */
+  LCD_BAR_3,						/* 3 */
+  LCD_BAR_HALF = LCD_BAR_3,
+  LCD_BAR_50_PERC = LCD_BAR_3,
+  LCD_BAR_4,						/* 4 */
+  LCD_BAR_5,						/* 5 */
+  LCD_BAR_6,						/* 6 */
+  LCD_BAR_7,						/* 7 */
+  LCD_BAR_75_PERC = LCD_BAR_7,
+  LCD_BAR_8,						/* 8 */
+  LCD_BAR_9,						/* 9 */
+  LCD_BAR_10 = 0x41,				/* A */
+  LCD_BAR_11,						/* B */
+  LCD_BAR_12,						/* C */
+  LCD_BAR_13,						/* D */
+  LCD_BAR_14,						/* E */
+  LCD_BAR_15,						/* F */
+  LCD_BAR_100_PERC = LCD_BAR_15,
+  LCD_BAR_FULL = LCD_BAR_15
+};
 
 /**
   @verbatim
@@ -95,17 +129,27 @@ MSB   { 1 , 1 , 0 , 0   }
       -------------------
   'A' =  F    E   0   0 hexa
 
+BARS
+
+Barra   | Pin Segmento | Pin Comune | Registro RAM | Bit Esatto   
+Grafica |      MCU     | Associato  | LCD STM32    | nel Registro
+
+BAR0 (Barra più bassa)   | SEG4  (PB15) | COM0LCD->RAM[0] (COM0) | Bit 4
+BAR1 (Seconda dal basso) | SEG23 (PA6)  | COM1LCD->RAM[2] (COM1) | Bit 23
+BAR2 (Terza dal basso)   | SEG4  (PB15) | COM2LCD->RAM[4] (COM2) | Bit 4
+BAR3 (Barra più alta)    | SEG23 (PA6)  | COM3LCD->RAM[6] (COM3) | Bit 23
+
   @endverbatim
 */
 
 /* Constant table for cap characters 'A' --> 'Z' */
 const uint16_t CapLetterMap[26]=
     {
-        /* A      B      C      D      E      F      G      H      I  */
+        /* A       B       C       D       E       F       G       H       I  */
         0xFE00, 0x6714, 0x1D00, 0x4714, 0x9D00, 0x9C00, 0x3F00, 0xFA00, 0x0014,
-        /* J      K      L      M      N      O      P      Q      R  */
+        /* J       K       L       M       N       O       P       Q       R  */
         0x5300, 0x9841, 0x1900, 0x5A48, 0x5A09, 0x5F00, 0xFC00, 0x5F01, 0xFC01,
-        /* S      T      U      V      W      X      Y      Z  */
+        /* S       T       U       V       W       X       Y       Z  */
         0xAF00, 0x0414, 0x5b00, 0x18C0, 0x5A81, 0x00C9, 0x0058, 0x05C0
     };
 
@@ -113,7 +157,7 @@ const uint16_t CapLetterMap[26]=
 const uint16_t NumberMap[10]=
     {
         /* 0      1      2      3      4      5      6      7      8      9  */
-        0x5F00,0x4200,0xF500,0x6700,0xEa00,0xAF00,0xBF00,0x04600,0xFF00,0xEF00
+        0x5FC0,0x4200,0xF500,0x6700,0xEa00,0xAF00,0xBF00,0x04600,0xFF00,0xEF00
     };
 
 /**
@@ -132,32 +176,24 @@ typedef enum
 
 /**
   * @brief LCD Glass point
-  * Warning: element values correspond to LCD Glass point.
+  * Element values correspond to LCD Glass point, for positions 1 to 4.
   */
 
-typedef enum
+enum lcd_point
 {
-  POINT_OFF = 0,
-  POINT_ON = 1
-}Point_Typedef;
-
-/**
-  * @brief LCD Glass Double point
-  * Warning: element values correspond to LCD Glass Double point.
-  */
-typedef enum
-{
-  DOUBLEPOINT_OFF = 0,
-  DOUBLEPOINT_ON = 1
-}DoublePoint_Typedef;
+	POINT_OFF = 0,
+  POINT_SINGLE,
+	POINT_DOUBLE,
+	POINT_TRIPLE
+};
 
 /* Define for scrolling sentences*/
 #define SCROLL_SPEED_HIGH     150
 #define SCROLL_SPEED_MEDIUM   300
 #define SCROLL_SPEED_LOW      450
 
-#define DOT                   ((uint16_t) 0x8000 ) /* for add decimal point in string */
-#define DOUBLE_DOT            ((uint16_t) 0x4000) /* for add decimal point in string */
+/* code for ' ' character */
+#define C_SPACE               ((uint16_t) 0x0000)
 
 /* code for '(' character */
 #define C_OPENPARMAP          ((uint16_t) 0x0028)
@@ -187,7 +223,7 @@ typedef enum
 #define C_PLUS                ((uint16_t) 0xA014)
 
 /* constant code for '/' */
-#define C_SLATCH              ((uint16_t) 0x00c0)
+#define C_SLASH               ((uint16_t) 0x00c0)
 
 /* constant code for ° */
 #define C_PERCENT_1           ((uint16_t) 0xec00)
@@ -196,45 +232,6 @@ typedef enum
 #define C_PERCENT_2           ((uint16_t) 0xb300)
 
 #define C_FULL                ((uint16_t) 0xffdd)
-
-/**
-  * @brief LCD digit defintion 
-  */
-#define COM_PER_DIGIT_NB          4/*!< Specifies number of COM to address a digit */
-#define SEG_PER_DIGIT_NB          4/*!< Specifies number of SEG to address a digit */
-
-#define LCD_MAP_CHAR_COM0_SEG_1ST_POS   (1 << LCD_MAP_CHAR_COM0_SEG_1ST_SHIFT)
-#define LCD_MAP_CHAR_COM0_SEG_2ND_POS   (1 << LCD_MAP_CHAR_COM0_SEG_2ND_SHIFT)
-#define LCD_MAP_CHAR_COM0_SEG_3RD_POS   (1 << LCD_MAP_CHAR_COM0_SEG_3RD_SHIFT)
-#define LCD_MAP_CHAR_COM0_SEG_4TH_POS   (1 << LCD_MAP_CHAR_COM0_SEG_4TH_SHIFT)
-#define LCD_MAP_CHAR_COM1_SEG_1ST_POS   (1 << LCD_MAP_CHAR_COM1_SEG_1ST_SHIFT)
-#define LCD_MAP_CHAR_COM1_SEG_2ND_POS   (1 << LCD_MAP_CHAR_COM1_SEG_2ND_SHIFT)
-#define LCD_MAP_CHAR_COM1_SEG_3RD_POS   (1 << LCD_MAP_CHAR_COM1_SEG_3RD_SHIFT)
-#define LCD_MAP_CHAR_COM1_SEG_4TH_POS   (1 << LCD_MAP_CHAR_COM1_SEG_4TH_SHIFT)
-#define LCD_MAP_CHAR_COM2_SEG_1ST_POS   (1 << LCD_MAP_CHAR_COM2_SEG_1ST_SHIFT)
-#define LCD_MAP_CHAR_COM2_SEG_2ND_POS   (1 << LCD_MAP_CHAR_COM2_SEG_2ND_SHIFT)
-#define LCD_MAP_CHAR_COM2_SEG_3RD_POS   (1 << LCD_MAP_CHAR_COM2_SEG_3RD_SHIFT)
-#define LCD_MAP_CHAR_COM2_SEG_4TH_POS   (1 << LCD_MAP_CHAR_COM2_SEG_4TH_SHIFT)
-#define LCD_MAP_CHAR_COM3_SEG_1ST_POS   (1 << LCD_MAP_CHAR_COM3_SEG_1ST_SHIFT)
-#define LCD_MAP_CHAR_COM3_SEG_2ND_POS   (1 << LCD_MAP_CHAR_COM3_SEG_2ND_SHIFT)
-#define LCD_MAP_CHAR_COM3_SEG_3RD_POS   (1 << LCD_MAP_CHAR_COM3_SEG_3RD_SHIFT)
-#define LCD_MAP_CHAR_COM3_SEG_4TH_POS   (1 << LCD_MAP_CHAR_COM3_SEG_4TH_SHIFT)
-#define LCD_MAP_CHAR_COM0_SEG_1ST_SHIFT 0x00000000
-#define LCD_MAP_CHAR_COM0_SEG_2ND_SHIFT 0x00000001
-#define LCD_MAP_CHAR_COM0_SEG_3RD_SHIFT 0x00000002
-#define LCD_MAP_CHAR_COM0_SEG_4TH_SHIFT 0x00000003
-#define LCD_MAP_CHAR_COM1_SEG_1ST_SHIFT 0x00000004
-#define LCD_MAP_CHAR_COM1_SEG_2ND_SHIFT 0x00000005
-#define LCD_MAP_CHAR_COM1_SEG_3RD_SHIFT 0x00000006
-#define LCD_MAP_CHAR_COM1_SEG_4TH_SHIFT 0x00000007
-#define LCD_MAP_CHAR_COM2_SEG_1ST_SHIFT 0x00000008
-#define LCD_MAP_CHAR_COM2_SEG_2ND_SHIFT 0x00000009
-#define LCD_MAP_CHAR_COM2_SEG_3RD_SHIFT 0x00000010
-#define LCD_MAP_CHAR_COM2_SEG_4TH_SHIFT 0x00000011
-#define LCD_MAP_CHAR_COM3_SEG_1ST_SHIFT 0x00000012
-#define LCD_MAP_CHAR_COM3_SEG_2ND_SHIFT 0x00000013
-#define LCD_MAP_CHAR_COM3_SEG_3RD_SHIFT 0x00000014
-#define LCD_MAP_CHAR_COM3_SEG_4TH_SHIFT 0x00000015
 
 /**
   * @brief LCD Digit defines
@@ -310,8 +307,20 @@ typedef enum
 #define LCD_DIGIT6_COM3_SEG_MASK      ~(LCD_SEG10 | LCD_SEG11 | LCD_SEG12 | LCD_SEG13)
 
 /**
+  * @brief LCD Bar segments & coms definitions.
+  */
+#define LCD_BAR0_2_COM            LCD_COM3
+#define LCD_BAR1_3_COM            LCD_COM2
+#define LCD_BAR0_SEG              LCD_SEG11
+#define LCD_BAR1_SEG              LCD_SEG11
+#define LCD_BAR2_SEG              LCD_SEG9
+#define LCD_BAR3_SEG              LCD_SEG9
+#define LCD_BAR2_SEG_MASK         ~(LCD_BAR2_SEG)
+#define LCD_BAR3_SEG_MASK         ~(LCD_BAR3_SEG)
+
+/**
   * @brief LCD segments & coms redefinition.
-  * LCD component segments & coms are not necessarily link to MCU segmnents & coms output.
+  * LCD component segments & coms are not necessarily linked to MCU segmnents & coms output.
   */
 #define LCD_COM0          MCU_LCD_COM0
 #define LCD_COM0_1        MCU_LCD_COM0_1
@@ -473,8 +482,8 @@ typedef enum
 #define MCU_LCD_SEG42_SHIFT   10
 #define MCU_LCD_SEG43_SHIFT   11
 
-static void Convert(uint8_t Char, Point_Typedef Point, DoublePoint_Typedef Colon, uint32_t* Digit);
-static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, Point_Typedef Point, DoublePoint_Typedef Colon, DigitPosition_Typedef Position);
+static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit);
+static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value);
 
 /**
   * @brief  Convert an ascii char to the a LCD digit.
@@ -487,7 +496,7 @@ static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, Point_Typedef Point, 
   * @param  Digit : output, digit frame buffer (length is 4).
   * @retval None
   */
-static void Convert(uint8_t Char, Point_Typedef Point, DoublePoint_Typedef Colon, uint32_t* Digit)
+static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit)
 {
   uint16_t ch = 0 ;
   uint8_t loop = 0, index = 0;
@@ -495,7 +504,7 @@ static void Convert(uint8_t Char, Point_Typedef Point, DoublePoint_Typedef Colon
   switch (Char)
     {
     case ' ' :
-      ch = 0x00;
+      ch = C_SPACE;
       break;
 
     case '*':
@@ -535,7 +544,7 @@ static void Convert(uint8_t Char, Point_Typedef Point, DoublePoint_Typedef Colon
       break;
 
     case '/' :
-      ch = C_SLATCH;
+      ch = C_SLASH;
       break;  
       
     case ASCII_CHAR_DEGREE_SIGN :
@@ -574,22 +583,33 @@ static void Convert(uint8_t Char, Point_Typedef Point, DoublePoint_Typedef Colon
       }
       break;
   }
-       
-  /* Set the digital point can be displayed if the point is on */
-  if (Point == POINT_ON)
-  {
-    ch |= 0x0002;
+
+  /* add bits for points */
+  if (position < LCD_DIGIT_POSITION_5) {
+    if (point == POINT_SINGLE || point == POINT_TRIPLE)
+    {
+      ch |= 0x0002;
+    }
+    if (point == POINT_DOUBLE || point == POINT_TRIPLE)
+    {
+      ch |= 0x0020;
+    }
   }
 
-  /* Set the "COL" segment in the character that can be displayed if the colon is on */
-  if (Colon == DOUBLEPOINT_ON)
-  {
-    ch |= 0x0020;
-  }    
+  /* add bits for bars */
+  digit[5] = 0;
+  if (position == LCD_DIGIT_POSITION_6 && bar_value) {
+      /* bar 0 and 1 are mapped on the same segments as points */
+      if (bar_value & 0x01) ch |= 0x0002;
+      if (bar_value & 0x02) ch |= 0x0020;
+      /* bar 2 and 3 are mapped on segments never used in positions other than 6 */
+      if (bar_value & 0x04) digit[5] |= 0x0001;
+      if (bar_value & 0x08) digit[5] |= 0x0002;
+  }
 
   for (loop = 12, index=0 ; index < 4 ; loop -= 4, index++)
   {
-    Digit[index] = (ch >> loop) & 0x0f; /*To isolate the less significant digit */
+    digit[index] = (ch >> loop) & 0x0f; /*To isolate the less significant 4 bits */
   }
 }
 
@@ -605,14 +625,14 @@ static void Convert(uint8_t Char, Point_Typedef Point, DoublePoint_Typedef Colon
   * @param  Position: position in the LCD of the character to write [1:6]
   * @retval None
   */
-static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, Point_Typedef Point, DoublePoint_Typedef Colon, DigitPosition_Typedef Position)
+static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value)
 {
   uint32_t data = 0x00;
   /* To convert displayed character in segment in array digit */
-  uint32_t Digit[4];
-  Convert(ch, (Point_Typedef)Point, (DoublePoint_Typedef)Colon, Digit);
+  uint32_t Digit[5];
+  Convert(ch, position, point, bar_value, Digit);
 
-  switch (Position)
+  switch (position)
   {
     /* Position 1 on LCD (Digit1)*/
     case LCD_DIGIT_POSITION_1:
@@ -737,11 +757,17 @@ static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, Point_Typedef Point, 
       
       data = ((Digit[2] & 0x1) << LCD_SEG10_SHIFT) | (((Digit[2] & 0x2) >> 1) << LCD_SEG11_SHIFT)
           | (((Digit[2] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG13_SHIFT);
-      HAL_LCD_Write(hlcd, LCD_DIGIT6_COM2, LCD_DIGIT6_COM2_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
+      HAL_LCD_Write(hlcd, LCD_DIGIT6_COM2, LCD_DIGIT6_COM2_SEG_MASK, data) ; /* 1Q 1K BAR0 1P  */
       
       data = ((Digit[3] & 0x1) << LCD_SEG10_SHIFT) | (((Digit[3] & 0x2) >> 1) << LCD_SEG11_SHIFT)
           | (((Digit[3] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG13_SHIFT);
-      HAL_LCD_Write(hlcd, LCD_DIGIT6_COM3, LCD_DIGIT6_COM3_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
+      HAL_LCD_Write(hlcd, LCD_DIGIT6_COM3, LCD_DIGIT6_COM3_SEG_MASK, data) ; /* 1H 1J BAR1 1N  */
+
+      /* handle bar 2 and 3 */
+      data = ((Digit[5] & 0x1) << LCD_SEG9_SHIFT);
+      HAL_LCD_Write(hlcd, LCD_BAR0_2_COM, LCD_BAR2_SEG_MASK, data) ; /* BAR2 */
+      data = (((Digit[5] & 0x2) >> 1) << LCD_SEG9_SHIFT);
+      HAL_LCD_Write(hlcd, LCD_BAR1_3_COM, LCD_BAR3_SEG_MASK, data) ; /* BAR2 */
       break;
     
      default:
@@ -789,33 +815,39 @@ static int stm32_lcd_aux_write(const struct device *dev, const uint8_t *data, ui
 	struct stm32_lcd_data *driver_data = dev->data;
 
 	/* Clear the entire LCD memory structure before rendering the updated text payload */
-	HAL_LCD_Clear(&driver_data->hlcd);
+	//HAL_LCD_Clear(&driver_data->hlcd);
 
 	/* Loop to update segments sequentially up to the physical maximum string length restriction */
 	for (int i = 0, position = 0; i < len && position < config->columns; i++, position++) {
 		const uint8_t Char = data[i];
-		Point_Typedef point = POINT_OFF;
-		DoublePoint_Typedef double_point = DOUBLEPOINT_OFF;
-		if (i+1 < len){
-			switch(data[i+1]){
-				case ASCII_DOT:
-					if (position < LCD_DIGIT_POSITION_5) point = POINT_ON;
-					i++;
-					break;
-				case ASCII_DOUBLE_DOT:
-					if (position < LCD_DIGIT_POSITION_5) double_point = DOUBLEPOINT_ON;
-					i++;
-					break;
-				case ASCII_TRIPLE_DOT:
-					if (position < LCD_DIGIT_POSITION_5){
-						point = POINT_ON;
-						double_point = DOUBLEPOINT_ON;
-					}
-					i++;
-					break;
+		uint8_t point = POINT_OFF;
+		uint8_t bar_value = 0;
+		if (i+1 < len) {
+			const uint8_t symbol_char =  data[i+1];
+			if (position < LCD_DIGIT_POSITION_6) {
+				switch (symbol_char) {
+					case ASCII_DOT:
+						point = POINT_SINGLE;
+						i++;
+						break;
+					case ASCII_DOUBLE_DOT:
+						point = POINT_DOUBLE;
+						i++;
+						break;
+					case ASCII_TRIPLE_DOT:
+						point = POINT_TRIPLE;
+						i++;
+						break;
+					default:
+						break;
+				}
+			}
+			else if (symbol_char < 0x10) { // lcd bars
+				bar_value = symbol_char;
+				i++;
 			}
 		}
-		WriteChar(&driver_data->hlcd, Char, point, double_point, position);
+		WriteChar(&driver_data->hlcd, Char, position, point, bar_value);
 	}
 
 	/* Fire a hardware request telling the peripheral controller to push internal RAM data to the glass */
@@ -850,6 +882,8 @@ static int stm32_lcd_aux_init(const struct device *dev)
 		return ret;
 	}
 
+	//k_busy_wait(10);
+
 	/* 2. Enforce the required pin alternate configurations natively via the Pinctrl manager framework */
 	ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
 	if (ret < 0) {
@@ -874,8 +908,12 @@ static int stm32_lcd_aux_init(const struct device *dev)
 	driver_data->hlcd.Init.BlinkFrequency = LCD_BLINKFREQUENCY_DIV32;
 	driver_data->hlcd.Init.MuxSegment = LCD_MUXSEGMENT_DISABLE;
 
-	__HAL_RCC_PWR_CLK_ENABLE();
+	// __HAL_RCC_PWR_CLK_ENABLE();
+	// HAL_PWR_EnableBkUpAccess();
+	// //HAL_Delay(2);
 	__HAL_RCC_LCD_CLK_ENABLE();
+	// //HAL_Delay(2);
+	//__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE); 
 
 	HAL_StatusTypeDef init_res = HAL_LCD_Init(&driver_data->hlcd);
 	if ( init_res != HAL_OK) {
@@ -904,8 +942,8 @@ static int stm32_lcd_aux_init(const struct device *dev)
 		.pclken = stm32_lcd_pclken_##inst,                                      \
 		.clk_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_IDX(inst, 0)),          \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                           \
-		.columns = DT_INST_PROP(inst, columns),                              \
-		.rows = DT_INST_PROP(inst, rows),                                   \
+		.columns = DT_INST_PROP(inst, columns),                                 \
+		.rows = DT_INST_PROP(inst, rows),                                       \
 	};                                                                          \
 																				\
 	static struct stm32_lcd_data stm32_lcd_data_##inst;                         \
