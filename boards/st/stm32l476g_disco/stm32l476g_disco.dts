@@ -96,12 +96,18 @@
 	status = "okay";
 };
 
+&clk_lse {
+	status = "okay";  /* Enable the on-board external quartz at 32.768 kHz */
+	driving-capability = <3>;
+};
+
 &rcc {
 	clocks = <&pll>;
 	clock-frequency = <DT_FREQ_M(80)>;
 	ahb-prescaler = <1>;
 	apb1-prescaler = <1>;
 	apb2-prescaler = <1>;
+	status = "okay";
 };
 
 &usart2 {
@@ -113,7 +119,7 @@
 
 &rtc {
 	clocks = <&rcc STM32_CLOCK(APB1, 28)>,
-		 <&rcc STM32_SRC_LSI RTC_SEL(2)>;
+		 <&rcc STM32_SRC_LSE RTC_SEL(1)>;
 	status = "okay";
 
 	backup_regs {
@@ -134,7 +140,9 @@
 
 			reg = <0x40002400 0x400>;
 
-			clocks = <&rcc STM32_CLOCK(APB1, 24)>;
+			clocks = <&rcc STM32_CLOCK(APB1, 24)>,
+				 <&rcc STM32_SRC_LSE RTC_SEL(1)>;
+			clock-names = "bus", "device";
 
 			pinctrl-0 = <&lcd_seg23_pa6 &lcd_seg0_pa7 &lcd_com0_pa8
 				     &lcd_com1_pa9 &lcd_com2_pa10 &lcd_seg10_pa15
