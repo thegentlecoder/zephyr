@@ -1,0 +1,62 @@
+.. zephyr:code-sample:: auxdisplay_14seg
+   :name: Auxiliary digits display
+   :relevant-api: auxdisplay_interface
+
+   Output increasing numbers to an auxiliary display.
+
+Overview
+********
+
+This sample demonstrates the use of the
+:ref:`auxiliary display driver <auxdisplay_api>` for digit-based displays, such
+as 14-segment displays with points and bars.
+
+Building and Running
+********************
+
+Note that this sample requires a board with a 14-segment display setup. You can
+build your own setup by fly-wiring a 14-segment display to any board you have.
+
+A sample overlay is provided for the ``stm32l476g_disco`` target. See the overlay file
+:zephyr_file:`samples/drivers/auxdisplay_digits/boards/stm32l476g_disco.overlay` for a
+demonstration.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/drivers/auxdisplay_14seg
+   :host-os: unix
+   :board: stm32l476g_disco
+   :goals: build
+   :compact:
+
+If successful, the display first lights up all segments (e.g., 8.8.8.= on a
+6-digit display), shows some strings, lights bars as binary digits and percentage.
+
+File and folders
+****************
+
+ORI boards/st/stm32l476g_disco/stm32l476g_disco.dts
+
+MOD drivers/auxdisplay/CMakeLists.txt
+MOD drivers/auxdisplay/Kconfig
+ADD drivers/auxdisplay/Kconfig.st_stm32_glass_lcd
+ADD drivers/auxdisplay/auxdisplay_st_stm32_glass_lcd.c
+
+ADD dts/bindings/auxdisplay/st,stm32-glass-lcd.yaml
+
+ADD samples/drivers/auxdisplay_14seg/board/stm32l476g_disco.overlay
+ADD samples/drivers/auxdisplay_14seg/src/main.c
+ADD samples/drivers/auxdisplay_14seg/CMakeLists.txt
+ADD samples/drivers/auxdisplay_14seg/prj.conf
+ADD samples/drivers/auxdisplay_14seg/README.rst
+ADD samples/drivers/auxdisplay_14seg/sample.yaml
+
+Open points
+***********
+
+- apply zephyr project's coding rules
+- add drivers\auxdisplay\auxdisplay_st_stm32_glass_lcd.h to export 
+  some character definition and adapt main.c to use them
+- remove usage of __HAL_RCC_LCD_CLK_ENABLE(); from 
+  drivers\auxdisplay\auxdisplay_st_stm32_glass_lcd.c
+- simplify usage of SEG/COM definitions
+- snow demo with segments

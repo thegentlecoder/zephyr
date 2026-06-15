@@ -12,41 +12,30 @@
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 #include <zephyr/logging/log.h>
-//#include <soc.h>
 
-/* This driver is for stm32l476g_discovery REVB or REVC, 
+/* This driver is for stm32l476g_discovery REVB or REVC only,
  * thus REVA is not supported.
  */
 LOG_MODULE_REGISTER(auxdisplay_stm32_glass_lcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
 
-#define LCD_RAM_REGISTER0               (0x00000000U) /*!< LCD RAM Register 0  */
-#define LCD_RAM_REGISTER1               (0x00000001U) /*!< LCD RAM Register 1  */
-#define LCD_RAM_REGISTER2               (0x00000002U) /*!< LCD RAM Register 2  */
-#define LCD_RAM_REGISTER3               (0x00000003U) /*!< LCD RAM Register 3  */
-#define LCD_RAM_REGISTER4               (0x00000004U) /*!< LCD RAM Register 4  */
-#define LCD_RAM_REGISTER5               (0x00000005U) /*!< LCD RAM Register 5  */
-#define LCD_RAM_REGISTER6               (0x00000006U) /*!< LCD RAM Register 6  */
-#define LCD_RAM_REGISTER7               (0x00000007U) /*!< LCD RAM Register 7  */
-#define LCD_RAM_REGISTER8               (0x00000008U) /*!< LCD RAM Register 8  */
-#define LCD_RAM_REGISTER9               (0x00000009U) /*!< LCD RAM Register 9  */
-#define LCD_RAM_REGISTER10              (0x0000000AU) /*!< LCD RAM Register 10 */
-#define LCD_RAM_REGISTER11              (0x0000000BU) /*!< LCD RAM Register 11 */
-#define LCD_RAM_REGISTER12              (0x0000000CU) /*!< LCD RAM Register 12 */
-#define LCD_RAM_REGISTER13              (0x0000000DU) /*!< LCD RAM Register 13 */
-#define LCD_RAM_REGISTER14              (0x0000000EU) /*!< LCD RAM Register 14 */
-#define LCD_RAM_REGISTER15              (0x0000000FU) /*!< LCD RAM Register 15 */
+/* Supported characters
 
-#define ASCII_CHAR_0                  0x30  /* 0 */
-#define ASCII_CHAR_AT_SYMBOL          0x40  /* @ */
-#define ASCII_CHAR_LEFT_OPEN_BRACKET  0x5B  /* [ */
-#define ASCII_CHAR_APOSTROPHE         0x60  /* ` */
-#define ASCII_CHAR_LEFT_OPEN_BRACE    0x7B  /* ( */
+  Numbers:            0..9
+  Uppercase letters:  A..Z  a..c  e..l  o..z
+  Lowercase letters:  d  m  n
+  Symbols:            Space (0x20)  +  -  *  /  °  % (lower degree sign)
+  Others:             µ (0xB5)  'full' (0xFF)
 
-// Greek letter mu, i.e. micro, is ASCII 0xB5 or 0xE6.
+  Points (pos 1..4):  . (dot)  : (double dot)  ; (triple dot)
+
+  Bars (pos 6):         (0x00)..(0x0F)
+*/
+
+/* Greek letter mu, i.e. micro, is ASCII 0xB5. */
 #define ASCII_CHAR_MU                 0xB5  /* µ */
-// Degree Sign or half percent is ASCII 0xB0
+/* Degree Sign or half percent is ASCII 0xB0. */
 #define ASCII_CHAR_DEGREE_SIGN        0xB0  /* ° */
-// All the segments in a position, but the dots.
+/* All the segments in a position, but the dots. */
 #define ASCII_CHAR_FULL               0xFF
 
 #define ASCII_DOT                     0x2E  /* . */
@@ -59,31 +48,48 @@ LOG_MODULE_REGISTER(auxdisplay_stm32_glass_lcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
  */
 enum lcd_bar_value
 {
-  LCD_BAR_OFF  = 0x0,
-  LCD_BAR_0 = LCD_BAR_OFF,			/* 0 */
+  LCD_BAR_0 = 0x00,
+  LCD_BAR_OFF = LCD_BAR_0,
   LCD_BAR_EMPTY = LCD_BAR_0,
   LCD_BAR_0_PERC = LCD_BAR_0,
-  LCD_BAR_1,						/* 1 */
+  LCD_BAR_1 = 0x01,
+  LCD_BAR_1_QUARTER = LCD_BAR_1,
   LCD_BAR_25_PERC = LCD_BAR_1,
-  LCD_BAR_2,						/* 2 */
-  LCD_BAR_3,						/* 3 */
+  LCD_BAR_2 = 0x02,
+  LCD_BAR_3 = 0x03,
   LCD_BAR_HALF = LCD_BAR_3,
   LCD_BAR_50_PERC = LCD_BAR_3,
-  LCD_BAR_4,						/* 4 */
-  LCD_BAR_5,						/* 5 */
-  LCD_BAR_6,						/* 6 */
-  LCD_BAR_7,						/* 7 */
+  LCD_BAR_4 = 0x04,
+  LCD_BAR_5 = 0x05,
+  LCD_BAR_6 = 0x06,
+  LCD_BAR_7 = 0x07,
+  LCD_BAR_3_QUARTERS = LCD_BAR_7,
   LCD_BAR_75_PERC = LCD_BAR_7,
-  LCD_BAR_8,						/* 8 */
-  LCD_BAR_9,						/* 9 */
-  LCD_BAR_10 = 0x41,				/* A */
-  LCD_BAR_11,						/* B */
-  LCD_BAR_12,						/* C */
-  LCD_BAR_13,						/* D */
-  LCD_BAR_14,						/* E */
-  LCD_BAR_15,						/* F */
+  LCD_BAR_8 = 0x08,
+  LCD_BAR_9 = 0x09,
+  LCD_BAR_10 = 0x0A,
+  LCD_BAR_11 = 0x0B,
+  LCD_BAR_12 = 0x0C,
+  LCD_BAR_13 = 0x0D,
+  LCD_BAR_14 = 0x0E,
+  LCD_BAR_15 = 0x0F,
+  LCD_BAR_FULL = LCD_BAR_15,
   LCD_BAR_100_PERC = LCD_BAR_15,
-  LCD_BAR_FULL = LCD_BAR_15
+  LCD_BAR_MAX = 0x10
+};
+
+/**
+  * @brief LCD Glass digit position
+  */
+enum lcd_digit_position
+{
+  LCD_DIGIT_POSITION_1 = 0,
+  LCD_DIGIT_POSITION_2 = 1,
+  LCD_DIGIT_POSITION_3 = 2,
+  LCD_DIGIT_POSITION_4 = 3,
+  LCD_DIGIT_POSITION_5 = 4,
+  LCD_DIGIT_POSITION_6 = 5,
+  LCD_DIGIT_MAX_NUMBER = 6,
 };
 
 /**
@@ -101,43 +107,45 @@ LCD allows to display informations on six 14-segment digits and 4 bars:
 ----- * ----- * ----- * ----- * -----   -----   BAR0
 
 LCD segment mapping:
---------------------
-  -----A-----        _ 
-  |\   |   /|   COL |_|
-  F H  J  K B          
-  |  \ | /  |        _ 
-  --G-- --M--   COL |_|
-  |  / | \  |          
-  E Q  P  N C          
-  |/   |   \|        _ 
-  -----D-----   DP  |_|
+
+  Pos 1..6      Pos 1..4                 Pos 6    
+
+  -----A-----                                     
+  |\   |   /|        _                  _______   
+  F H  J  K B   COL |_|           BAR3 |_______|  
+  |  \ | /  |                           _______   
+  --G-- --M--        _            BAR2 |_______|  
+  |  / | \  |   COL |_|                 _______   
+  E Q  P  N C                     COL  |_______|  
+  |/   |   \|        _                  _______   
+  -----D-----   DP  |_|           DP   |_______|  
 
  An LCD character coding is based on the following matrix:
 COM           0   1   2     3
-SEG(n)      { E , D , P ,   N   }
-SEG(n+1)    { M , C , COL , DP  }
-SEG(23-n-1) { B , A , K ,   J   }
-SEG(23-n)   { G , F , Q ,   H   }
+SEG(n)      { E , D , P ,   N  }
+SEG(n+1)    { M , C , COL , DP }
+SEG(23-n-1) { B , A , K ,   J  }
+SEG(23-n)   { G , F , Q ,   H  }
 with n positive odd number.
 
  The character 'A' for example is:
   -------------------------------
-LSB   { 1 , 0 , 0 , 0   }
-      { 1 , 1 , 0 , 0   }
-      { 1 , 1 , 0 , 0   }
-MSB   { 1 , 1 , 0 , 0   }
+LSB   { 1 , 0 , 0 , 0 }
+      { 1 , 1 , 0 , 0 }
+      { 1 , 1 , 0 , 0 }
+MSB   { 1 , 1 , 0 , 0 }
       -------------------
-  'A' =  F    E   0   0 hexa
+ 'A' =  F   E   0   0  hexadecimal
 
 BARS
 
-Barra   | Pin Segmento | Pin Comune | Registro RAM | Bit Esatto   
-Grafica |      MCU     | Associato  | LCD STM32    | nel Registro
-
-BAR0 (Barra più bassa)   | SEG4  (PB15) | COM0LCD->RAM[0] (COM0) | Bit 4
-BAR1 (Seconda dal basso) | SEG23 (PA6)  | COM1LCD->RAM[2] (COM1) | Bit 23
-BAR2 (Terza dal basso)   | SEG4  (PB15) | COM2LCD->RAM[4] (COM2) | Bit 4
-BAR3 (Barra più alta)    | SEG23 (PA6)  | COM3LCD->RAM[6] (COM3) | Bit 23
+|      Graphic Bar    |   Segment   | Common |   RAM    |
+|      (position)     |  (MCU pin)  |   pin  | Register |
+|-------------------------------------------------------|
+| BAR3 (top)          | SEG9  (PC7) |  COM2  |    4     |
+| BAR2 (middle-upper) | SEG9  (PC7) |  COM3  |    6     |
+| BAR1 (middle-lower) | SEG11 (PB4) |  COM2  |    4     |
+| BAR0 (bottom)       | SEG11 (PB4) |  COM3  |    6     |
 
   @endverbatim
 */
@@ -159,38 +167,6 @@ const uint16_t NumberMap[10]=
         /* 0      1      2      3      4      5      6      7      8      9  */
         0x5FC0,0x4200,0xF500,0x6700,0xEa00,0xAF00,0xBF00,0x04600,0xFF00,0xEF00
     };
-
-/**
-  * @brief LCD Glass digit position
-  */
-typedef enum
-{
-  LCD_DIGIT_POSITION_1 = 0,
-  LCD_DIGIT_POSITION_2 = 1,
-  LCD_DIGIT_POSITION_3 = 2,
-  LCD_DIGIT_POSITION_4 = 3,
-  LCD_DIGIT_POSITION_5 = 4,
-  LCD_DIGIT_POSITION_6 = 5,
-  LCD_DIGIT_MAX_NUMBER = 6,
-}DigitPosition_Typedef;
-
-/**
-  * @brief LCD Glass point
-  * Element values correspond to LCD Glass point, for positions 1 to 4.
-  */
-
-enum lcd_point
-{
-	POINT_OFF = 0,
-  POINT_SINGLE,
-	POINT_DOUBLE,
-	POINT_TRIPLE
-};
-
-/* Define for scrolling sentences*/
-#define SCROLL_SPEED_HIGH     150
-#define SCROLL_SPEED_MEDIUM   300
-#define SCROLL_SPEED_LOW      450
 
 /* code for ' ' character */
 #define C_SPACE               ((uint16_t) 0x0000)
@@ -234,7 +210,7 @@ enum lcd_point
 #define C_FULL                ((uint16_t) 0xffdd)
 
 /**
-  * @brief LCD Digit defines
+  * @brief LCD Digit COM & SEG definitions
   */
 #define LCD_DIGIT1_COM0               LCD_COM0
 #define LCD_DIGIT1_COM0_SEG_MASK      ~(LCD_SEG0 | LCD_SEG1 | LCD_SEG22 | LCD_SEG23)
@@ -482,18 +458,62 @@ enum lcd_point
 #define MCU_LCD_SEG42_SHIFT   10
 #define MCU_LCD_SEG43_SHIFT   11
 
+#define LCD_RAM_REGISTER0               (0x00000000U) /*!< LCD RAM Register 0  */
+#define LCD_RAM_REGISTER1               (0x00000001U) /*!< LCD RAM Register 1  */
+#define LCD_RAM_REGISTER2               (0x00000002U) /*!< LCD RAM Register 2  */
+#define LCD_RAM_REGISTER3               (0x00000003U) /*!< LCD RAM Register 3  */
+#define LCD_RAM_REGISTER4               (0x00000004U) /*!< LCD RAM Register 4  */
+#define LCD_RAM_REGISTER5               (0x00000005U) /*!< LCD RAM Register 5  */
+#define LCD_RAM_REGISTER6               (0x00000006U) /*!< LCD RAM Register 6  */
+#define LCD_RAM_REGISTER7               (0x00000007U) /*!< LCD RAM Register 7  */
+#define LCD_RAM_REGISTER8               (0x00000008U) /*!< LCD RAM Register 8  */
+#define LCD_RAM_REGISTER9               (0x00000009U) /*!< LCD RAM Register 9  */
+#define LCD_RAM_REGISTER10              (0x0000000AU) /*!< LCD RAM Register 10 */
+#define LCD_RAM_REGISTER11              (0x0000000BU) /*!< LCD RAM Register 11 */
+#define LCD_RAM_REGISTER12              (0x0000000CU) /*!< LCD RAM Register 12 */
+#define LCD_RAM_REGISTER13              (0x0000000DU) /*!< LCD RAM Register 13 */
+#define LCD_RAM_REGISTER14              (0x0000000EU) /*!< LCD RAM Register 14 */
+#define LCD_RAM_REGISTER15              (0x0000000FU) /*!< LCD RAM Register 15 */
+
+/* Define for scrolling sentences*/
+#define SCROLL_SPEED_HIGH     150
+#define SCROLL_SPEED_MEDIUM   300
+#define SCROLL_SPEED_LOW      450
+
+#define NIBBLE_BUFFER_LEN 5
+#define NIBBLE_BUFFER_BAR2_3_INDEX    NIBBLE_BUFFER_LEN-1
+
+#define ASCII_CHAR_0                  0x30  /* 0 */
+#define ASCII_CHAR_AT_SYMBOL          0x40  /* @ */
+#define ASCII_CHAR_LEFT_OPEN_BRACKET  0x5B  /* [ */
+#define ASCII_CHAR_APOSTROPHE         0x60  /* ` */
+#define ASCII_CHAR_LEFT_OPEN_BRACE    0x7B  /* ( */
+
+/**
+  * @brief LCD Glass point
+  * Element values correspond to LCD Glass point, for positions 1 to 4.
+  */
+
+enum lcd_point
+{
+	POINT_OFF = 0,
+  POINT_SINGLE,
+	POINT_DOUBLE,
+	POINT_TRIPLE
+};
+
 static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit);
 static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value);
 
 /**
-  * @brief  Convert an ascii char to the a LCD digit.
+  * @brief  Convert an ascii char to the an LCD digit, handling points and bars too.
   * @param  Char: a char to display.
-  * @param  Point: a point to add in front of char
-  *         This parameter can be: POINT_OFF or POINT_ON
-  * @param  Colon : flag indicating if a colon character has to be added in front
-  *         of displayed character.
-  *         This parameter can be: DOUBLEPOINT_OFF or DOUBLEPOINT_ON.
-  * @param  Digit : output, digit frame buffer (length is 4).
+  * @param  position: the character LCD destination [1:6].
+  * @param  point: a point or colon to display right after the character.
+  *         Allowed in positions 1 to 4, ignored otherwise.
+  *         Valid values: 0x0, ASCII_DOT, ASCII_DOUBLE_DOT, ASCII_TRIPLE_DOT
+  * @param  bar_value: the value (enum lcd_bar_value) to display with bars, in position 6 only.
+  * @param  digit : output, digit frame buffer (length is NIBBLE_BUFFER_LEN).
   * @retval None
   */
 static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit)
@@ -550,7 +570,7 @@ static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_v
     case ASCII_CHAR_DEGREE_SIGN :
       ch = C_PERCENT_1;
       break;  
-    case '%' :
+    case '%' : /* truly lower degree sign */
       ch = C_PERCENT_2; 
       break;
     case ASCII_CHAR_FULL :
@@ -597,14 +617,14 @@ static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_v
   }
 
   /* add bits for bars */
-  digit[5] = 0;
+  digit[NIBBLE_BUFFER_BAR2_3_INDEX] = 0;
   if (position == LCD_DIGIT_POSITION_6 && bar_value) {
       /* bar 0 and 1 are mapped on the same segments as points */
       if (bar_value & 0x01) ch |= 0x0002;
       if (bar_value & 0x02) ch |= 0x0020;
       /* bar 2 and 3 are mapped on segments never used in positions other than 6 */
-      if (bar_value & 0x04) digit[5] |= 0x0001;
-      if (bar_value & 0x08) digit[5] |= 0x0002;
+      if (bar_value & 0x04) digit[NIBBLE_BUFFER_BAR2_3_INDEX] |= 0x0001;
+      if (bar_value & 0x08) digit[NIBBLE_BUFFER_BAR2_3_INDEX] |= 0x0002;
   }
 
   for (loop = 12, index=0 ; index < 4 ; loop -= 4, index++)
@@ -614,160 +634,159 @@ static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_v
 }
 
 /**
-  * @brief  Write a character in the LCD frame buffer.
+  * @brief  Write a character in the LCD display, including points and bars.
   * @param  hlcd: the LCD display instance.
   * @param  ch: the character to display.
-  * @param  Point: a point to add in front of char
-  *         This parameter can be: POINT_OFF or POINT_ON
-  * @param  Colon: flag indicating if a colon character has to be added in front
-  *         of displayed character.
-  *         This parameter can be: DOUBLEPOINT_OFF or DOUBLEPOINT_ON.           
-  * @param  Position: position in the LCD of the character to write [1:6]
+  * @param  position: the character LCD destination [1:6].
+  * @param  point: a point or colon to display right after the character.
+  *         Allowed in positions 1 to 4, ignored otherwise.
+  *         Valid values: 0x0, ASCII_DOT, ASCII_DOUBLE_DOT, ASCII_TRIPLE_DOT
+  * @param  bar_value: the value (enum lcd_bar_value) to display with bars, in position 6 only.
   * @retval None
   */
 static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value)
 {
-  uint32_t data = 0x00;
   /* To convert displayed character in segment in array digit */
-  uint32_t Digit[5];
-  Convert(ch, position, point, bar_value, Digit);
+  uint32_t digit[NIBBLE_BUFFER_LEN];
+  Convert(ch, position, point, bar_value, digit);
 
+  uint32_t data = 0x00;
   switch (position)
   {
     /* Position 1 on LCD (Digit1)*/
     case LCD_DIGIT_POSITION_1:
-      data = ((Digit[0] & 0x1) << LCD_SEG0_SHIFT) | (((Digit[0] & 0x2) >> 1) << LCD_SEG1_SHIFT)
-          | (((Digit[0] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((Digit[0] & 0x8) >> 3) << LCD_SEG23_SHIFT);
+      data = ((digit[0] & 0x1) << LCD_SEG0_SHIFT) | (((digit[0] & 0x2) >> 1) << LCD_SEG1_SHIFT)
+          | (((digit[0] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((digit[0] & 0x8) >> 3) << LCD_SEG23_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT1_COM0, LCD_DIGIT1_COM0_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = ((Digit[1] & 0x1) << LCD_SEG0_SHIFT) | (((Digit[1] & 0x2) >> 1) << LCD_SEG1_SHIFT)
-          | (((Digit[1] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((Digit[1] & 0x8) >> 3) << LCD_SEG23_SHIFT);
+      data = ((digit[1] & 0x1) << LCD_SEG0_SHIFT) | (((digit[1] & 0x2) >> 1) << LCD_SEG1_SHIFT)
+          | (((digit[1] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((digit[1] & 0x8) >> 3) << LCD_SEG23_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT1_COM1, LCD_DIGIT1_COM1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = ((Digit[2] & 0x1) << LCD_SEG0_SHIFT) | (((Digit[2] & 0x2) >> 1) << LCD_SEG1_SHIFT)
-          | (((Digit[2] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG23_SHIFT);
+      data = ((digit[2] & 0x1) << LCD_SEG0_SHIFT) | (((digit[2] & 0x2) >> 1) << LCD_SEG1_SHIFT)
+          | (((digit[2] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((digit[2] & 0x8) >> 3) << LCD_SEG23_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT1_COM2, LCD_DIGIT1_COM2_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = ((Digit[3] & 0x1) << LCD_SEG0_SHIFT) | (((Digit[3] & 0x2) >> 1) << LCD_SEG1_SHIFT)
-          | (((Digit[3] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG23_SHIFT);
+      data = ((digit[3] & 0x1) << LCD_SEG0_SHIFT) | (((digit[3] & 0x2) >> 1) << LCD_SEG1_SHIFT)
+          | (((digit[3] & 0x4) >> 2) << LCD_SEG22_SHIFT) | (((digit[3] & 0x8) >> 3) << LCD_SEG23_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT1_COM3, LCD_DIGIT1_COM3_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       break;
 
     /* Position 2 on LCD (Digit2)*/
     case LCD_DIGIT_POSITION_2:
-      data = ((Digit[0] & 0x1) << LCD_SEG2_SHIFT) | (((Digit[0] & 0x2) >> 1) << LCD_SEG3_SHIFT)
-          | (((Digit[0] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((Digit[0] & 0x8) >> 3) << LCD_SEG21_SHIFT);
+      data = ((digit[0] & 0x1) << LCD_SEG2_SHIFT) | (((digit[0] & 0x2) >> 1) << LCD_SEG3_SHIFT)
+          | (((digit[0] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((digit[0] & 0x8) >> 3) << LCD_SEG21_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT2_COM0, LCD_DIGIT2_COM0_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = ((Digit[1] & 0x1) << LCD_SEG2_SHIFT) | (((Digit[1] & 0x2) >> 1) << LCD_SEG3_SHIFT)
-          | (((Digit[1] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((Digit[1] & 0x8) >> 3) << LCD_SEG21_SHIFT);
+      data = ((digit[1] & 0x1) << LCD_SEG2_SHIFT) | (((digit[1] & 0x2) >> 1) << LCD_SEG3_SHIFT)
+          | (((digit[1] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((digit[1] & 0x8) >> 3) << LCD_SEG21_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT2_COM1, LCD_DIGIT2_COM1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = ((Digit[2] & 0x1) << LCD_SEG2_SHIFT) | (((Digit[2] & 0x2) >> 1) << LCD_SEG3_SHIFT)
-          | (((Digit[2] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG21_SHIFT);
+      data = ((digit[2] & 0x1) << LCD_SEG2_SHIFT) | (((digit[2] & 0x2) >> 1) << LCD_SEG3_SHIFT)
+          | (((digit[2] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((digit[2] & 0x8) >> 3) << LCD_SEG21_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT2_COM2, LCD_DIGIT2_COM2_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = ((Digit[3] & 0x1) << LCD_SEG2_SHIFT) | (((Digit[3] & 0x2) >> 1) << LCD_SEG3_SHIFT)
-          | (((Digit[3] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG21_SHIFT);
+      data = ((digit[3] & 0x1) << LCD_SEG2_SHIFT) | (((digit[3] & 0x2) >> 1) << LCD_SEG3_SHIFT)
+          | (((digit[3] & 0x4) >> 2) << LCD_SEG20_SHIFT) | (((digit[3] & 0x8) >> 3) << LCD_SEG21_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT2_COM3, LCD_DIGIT2_COM3_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       break;
     
     /* Position 3 on LCD (Digit3)*/
     case LCD_DIGIT_POSITION_3:
-      data = ((Digit[0] & 0x1) << LCD_SEG4_SHIFT) | (((Digit[0] & 0x2) >> 1) << LCD_SEG5_SHIFT)
-          | (((Digit[0] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((Digit[0] & 0x8) >> 3) << LCD_SEG19_SHIFT);
+      data = ((digit[0] & 0x1) << LCD_SEG4_SHIFT) | (((digit[0] & 0x2) >> 1) << LCD_SEG5_SHIFT)
+          | (((digit[0] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((digit[0] & 0x8) >> 3) << LCD_SEG19_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT3_COM0, LCD_DIGIT3_COM0_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = ((Digit[1] & 0x1) << LCD_SEG4_SHIFT) | (((Digit[1] & 0x2) >> 1) << LCD_SEG5_SHIFT)
-          | (((Digit[1] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((Digit[1] & 0x8) >> 3) << LCD_SEG19_SHIFT);
+      data = ((digit[1] & 0x1) << LCD_SEG4_SHIFT) | (((digit[1] & 0x2) >> 1) << LCD_SEG5_SHIFT)
+          | (((digit[1] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((digit[1] & 0x8) >> 3) << LCD_SEG19_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT3_COM1, LCD_DIGIT3_COM1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = ((Digit[2] & 0x1) << LCD_SEG4_SHIFT) | (((Digit[2] & 0x2) >> 1) << LCD_SEG5_SHIFT)
-          | (((Digit[2] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG19_SHIFT);
+      data = ((digit[2] & 0x1) << LCD_SEG4_SHIFT) | (((digit[2] & 0x2) >> 1) << LCD_SEG5_SHIFT)
+          | (((digit[2] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((digit[2] & 0x8) >> 3) << LCD_SEG19_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT3_COM2, LCD_DIGIT3_COM2_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = ((Digit[3] & 0x1) << LCD_SEG4_SHIFT) | (((Digit[3] & 0x2) >> 1) << LCD_SEG5_SHIFT)
-          | (((Digit[3] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG19_SHIFT);
+      data = ((digit[3] & 0x1) << LCD_SEG4_SHIFT) | (((digit[3] & 0x2) >> 1) << LCD_SEG5_SHIFT)
+          | (((digit[3] & 0x4) >> 2) << LCD_SEG18_SHIFT) | (((digit[3] & 0x8) >> 3) << LCD_SEG19_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT3_COM3, LCD_DIGIT3_COM3_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       break;
     
     /* Position 4 on LCD (Digit4)*/
     case LCD_DIGIT_POSITION_4:
-      data = ((Digit[0] & 0x1) << LCD_SEG6_SHIFT) | (((Digit[0] & 0x8) >> 3) << LCD_SEG17_SHIFT);
+      data = ((digit[0] & 0x1) << LCD_SEG6_SHIFT) | (((digit[0] & 0x8) >> 3) << LCD_SEG17_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM0, LCD_DIGIT4_COM0_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = (((Digit[0] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((Digit[0] & 0x4) >> 2) << LCD_SEG16_SHIFT);
+      data = (((digit[0] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((digit[0] & 0x4) >> 2) << LCD_SEG16_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM0_1, LCD_DIGIT4_COM0_1_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = ((Digit[1] & 0x1) << LCD_SEG6_SHIFT) | (((Digit[1] & 0x8) >> 3) << LCD_SEG17_SHIFT);
+      data = ((digit[1] & 0x1) << LCD_SEG6_SHIFT) | (((digit[1] & 0x8) >> 3) << LCD_SEG17_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM1, LCD_DIGIT4_COM1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = (((Digit[1] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((Digit[1] & 0x4) >> 2) << LCD_SEG16_SHIFT);
+      data = (((digit[1] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((digit[1] & 0x4) >> 2) << LCD_SEG16_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM1_1, LCD_DIGIT4_COM1_1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = ((Digit[2] & 0x1) << LCD_SEG6_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG17_SHIFT);
+      data = ((digit[2] & 0x1) << LCD_SEG6_SHIFT) | (((digit[2] & 0x8) >> 3) << LCD_SEG17_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM2, LCD_DIGIT4_COM2_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = (((Digit[2] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((Digit[2] & 0x4) >> 2) << LCD_SEG16_SHIFT);
+      data = (((digit[2] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((digit[2] & 0x4) >> 2) << LCD_SEG16_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM2_1, LCD_DIGIT4_COM2_1_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = ((Digit[3] & 0x1) << LCD_SEG6_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG17_SHIFT);
+      data = ((digit[3] & 0x1) << LCD_SEG6_SHIFT) | (((digit[3] & 0x8) >> 3) << LCD_SEG17_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM3, LCD_DIGIT4_COM3_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       
-      data = (((Digit[3] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((Digit[3] & 0x4) >> 2) << LCD_SEG16_SHIFT);
+      data = (((digit[3] & 0x2) >> 1) << LCD_SEG7_SHIFT) | (((digit[3] & 0x4) >> 2) << LCD_SEG16_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT4_COM3_1, LCD_DIGIT4_COM3_1_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       break;
     
     /* Position 5 on LCD (Digit5)*/
     case LCD_DIGIT_POSITION_5:
-       data = (((Digit[0] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((Digit[0] & 0x4) >> 2) << LCD_SEG14_SHIFT);
+       data = (((digit[0] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((digit[0] & 0x4) >> 2) << LCD_SEG14_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM0, LCD_DIGIT5_COM0_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = ((Digit[0] & 0x1) << LCD_SEG8_SHIFT) | (((Digit[0] & 0x8) >> 3) << LCD_SEG15_SHIFT);
+      data = ((digit[0] & 0x1) << LCD_SEG8_SHIFT) | (((digit[0] & 0x8) >> 3) << LCD_SEG15_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM0_1, LCD_DIGIT5_COM0_1_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = (((Digit[1] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((Digit[1] & 0x4) >> 2) << LCD_SEG14_SHIFT);
+      data = (((digit[1] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((digit[1] & 0x4) >> 2) << LCD_SEG14_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM1, LCD_DIGIT5_COM1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-       data = ((Digit[1] & 0x1) << LCD_SEG8_SHIFT) | (((Digit[1] & 0x8) >> 3) << LCD_SEG15_SHIFT);
+       data = ((digit[1] & 0x1) << LCD_SEG8_SHIFT) | (((digit[1] & 0x8) >> 3) << LCD_SEG15_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM1_1, LCD_DIGIT5_COM1_1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = (((Digit[2] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((Digit[2] & 0x4) >> 2) << LCD_SEG14_SHIFT);
+      data = (((digit[2] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((digit[2] & 0x4) >> 2) << LCD_SEG14_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM2, LCD_DIGIT5_COM2_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = ((Digit[2] & 0x1) << LCD_SEG8_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG15_SHIFT);
+      data = ((digit[2] & 0x1) << LCD_SEG8_SHIFT) | (((digit[2] & 0x8) >> 3) << LCD_SEG15_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM2_1, LCD_DIGIT5_COM2_1_SEG_MASK, data) ; /* 1Q 1K 1Col 1P  */
       
-      data = (((Digit[3] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((Digit[3] & 0x4) >> 2) << LCD_SEG14_SHIFT);
+      data = (((digit[3] & 0x2) >> 1) << LCD_SEG9_SHIFT) | (((digit[3] & 0x4) >> 2) << LCD_SEG14_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM3, LCD_DIGIT5_COM3_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       
-      data = ((Digit[3] & 0x1) << LCD_SEG8_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG15_SHIFT);
+      data = ((digit[3] & 0x1) << LCD_SEG8_SHIFT) | (((digit[3] & 0x8) >> 3) << LCD_SEG15_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT5_COM3_1, LCD_DIGIT5_COM3_1_SEG_MASK, data) ; /* 1H 1J 1DP 1N  */
       break;
     
     /* Position 6 on LCD (Digit6)*/
     case LCD_DIGIT_POSITION_6:
-      data = ((Digit[0] & 0x1) << LCD_SEG10_SHIFT) | (((Digit[0] & 0x2) >> 1) << LCD_SEG11_SHIFT)
-          | (((Digit[0] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((Digit[0] & 0x8) >> 3) << LCD_SEG13_SHIFT);
+      data = ((digit[0] & 0x1) << LCD_SEG10_SHIFT) | (((digit[0] & 0x2) >> 1) << LCD_SEG11_SHIFT)
+          | (((digit[0] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((digit[0] & 0x8) >> 3) << LCD_SEG13_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT6_COM0, LCD_DIGIT6_COM0_SEG_MASK, data); /* 1G 1B 1M 1E */
       
-      data = ((Digit[1] & 0x1) << LCD_SEG10_SHIFT) | (((Digit[1] & 0x2) >> 1) << LCD_SEG11_SHIFT)
-          | (((Digit[1] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((Digit[1] & 0x8) >> 3) << LCD_SEG13_SHIFT);
+      data = ((digit[1] & 0x1) << LCD_SEG10_SHIFT) | (((digit[1] & 0x2) >> 1) << LCD_SEG11_SHIFT)
+          | (((digit[1] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((digit[1] & 0x8) >> 3) << LCD_SEG13_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT6_COM1, LCD_DIGIT6_COM1_SEG_MASK, data) ; /* 1F 1A 1C 1D  */
       
-      data = ((Digit[2] & 0x1) << LCD_SEG10_SHIFT) | (((Digit[2] & 0x2) >> 1) << LCD_SEG11_SHIFT)
-          | (((Digit[2] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((Digit[2] & 0x8) >> 3) << LCD_SEG13_SHIFT);
+      data = ((digit[2] & 0x1) << LCD_SEG10_SHIFT) | (((digit[2] & 0x2) >> 1) << LCD_SEG11_SHIFT)
+          | (((digit[2] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((digit[2] & 0x8) >> 3) << LCD_SEG13_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT6_COM2, LCD_DIGIT6_COM2_SEG_MASK, data) ; /* 1Q 1K BAR0 1P  */
       
-      data = ((Digit[3] & 0x1) << LCD_SEG10_SHIFT) | (((Digit[3] & 0x2) >> 1) << LCD_SEG11_SHIFT)
-          | (((Digit[3] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((Digit[3] & 0x8) >> 3) << LCD_SEG13_SHIFT);
+      data = ((digit[3] & 0x1) << LCD_SEG10_SHIFT) | (((digit[3] & 0x2) >> 1) << LCD_SEG11_SHIFT)
+          | (((digit[3] & 0x4) >> 2) << LCD_SEG12_SHIFT) | (((digit[3] & 0x8) >> 3) << LCD_SEG13_SHIFT);
       HAL_LCD_Write(hlcd, LCD_DIGIT6_COM3, LCD_DIGIT6_COM3_SEG_MASK, data) ; /* 1H 1J BAR1 1N  */
 
       /* handle bar 2 and 3 */
-      data = ((Digit[5] & 0x1) << LCD_SEG9_SHIFT);
+      data = ((digit[NIBBLE_BUFFER_BAR2_3_INDEX] & 0x1) << LCD_SEG9_SHIFT);
       HAL_LCD_Write(hlcd, LCD_BAR0_2_COM, LCD_BAR2_SEG_MASK, data) ; /* BAR2 */
-      data = (((Digit[5] & 0x2) >> 1) << LCD_SEG9_SHIFT);
-      HAL_LCD_Write(hlcd, LCD_BAR1_3_COM, LCD_BAR3_SEG_MASK, data) ; /* BAR2 */
+      data = (((digit[NIBBLE_BUFFER_BAR2_3_INDEX] & 0x2) >> 1) << LCD_SEG9_SHIFT);
+      HAL_LCD_Write(hlcd, LCD_BAR1_3_COM, LCD_BAR3_SEG_MASK, data) ; /* BAR3 */
       break;
     
      default:
@@ -795,10 +814,10 @@ static int stm32_lcd_capabilities_get(const struct device *dev, struct auxdispla
     const struct stm32_lcd_config *config = dev->config;
     if (!capabilities) return -EINVAL;
 
-	capabilities->columns = config->columns;
+	  capabilities->columns = config->columns;
     capabilities->rows = config->rows;
 
-	return 0;
+	  return 0;
 }
 
 static int stm32_lcd_clear(const struct device *dev)
@@ -824,7 +843,8 @@ static int stm32_lcd_aux_write(const struct device *dev, const uint8_t *data, ui
 		uint8_t bar_value = 0;
 		if (i+1 < len) {
 			const uint8_t symbol_char =  data[i+1];
-			if (position < LCD_DIGIT_POSITION_6) {
+      /* points in position 1..4, 5 is ignored in Convert() */
+			if (position < LCD_DIGIT_POSITION_6) { 
 				switch (symbol_char) {
 					case ASCII_DOT:
 						point = POINT_SINGLE;
@@ -842,7 +862,7 @@ static int stm32_lcd_aux_write(const struct device *dev, const uint8_t *data, ui
 						break;
 				}
 			}
-			else if (symbol_char < 0x10) { // lcd bars
+			else if (symbol_char < LCD_BAR_MAX) { /* lcd bars in position 6 */
 				bar_value = symbol_char;
 				i++;
 			}
@@ -910,10 +930,9 @@ static int stm32_lcd_aux_init(const struct device *dev)
 
 	// __HAL_RCC_PWR_CLK_ENABLE();
 	// HAL_PWR_EnableBkUpAccess();
-	// //HAL_Delay(2);
-	__HAL_RCC_LCD_CLK_ENABLE();
-	// //HAL_Delay(2);
 	//__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE); 
+	// HAL_Delay(2);
+	__HAL_RCC_LCD_CLK_ENABLE();
 
 	HAL_StatusTypeDef init_res = HAL_LCD_Init(&driver_data->hlcd);
 	if ( init_res != HAL_OK) {
