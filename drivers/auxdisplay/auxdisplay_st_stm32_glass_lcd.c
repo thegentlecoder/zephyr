@@ -12,6 +12,7 @@
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 #include <zephyr/logging/log.h>
+#include <stm32_ll_bus.h>
 
 /* This driver is for stm32l476g_discovery REVB or REVC only,
  * thus REVA is not supported.
@@ -902,7 +903,9 @@ static int stm32_lcd_aux_init(const struct device *dev)
 		return ret;
 	}
 
-	//k_busy_wait(10);
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_LCD);
+
+  k_busy_wait(10);
 
 	/* 2. Enforce the required pin alternate configurations natively via the Pinctrl manager framework */
 	ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
@@ -932,7 +935,7 @@ static int stm32_lcd_aux_init(const struct device *dev)
 	// HAL_PWR_EnableBkUpAccess();
 	//__HAL_RCC_RTC_CONFIG(RCC_RTCCLKSOURCE_LSE); 
 	// HAL_Delay(2);
-	__HAL_RCC_LCD_CLK_ENABLE();
+	// __HAL_RCC_LCD_CLK_ENABLE();
 
 	HAL_StatusTypeDef init_res = HAL_LCD_Init(&driver_data->hlcd);
 	if ( init_res != HAL_OK) {
