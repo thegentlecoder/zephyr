@@ -56,7 +56,5 @@ Open points
 - apply zephyr project's coding rules
 - add drivers\auxdisplay\auxdisplay_st_stm32_glass_lcd.h to export 
   some character definition and adapt main.c to use them
-- remove usage of __HAL_RCC_LCD_CLK_ENABLE(); from 
-  drivers\auxdisplay\auxdisplay_st_stm32_glass_lcd.c
 - simplify usage of SEG/COM definitions
 - snow demo with segments
