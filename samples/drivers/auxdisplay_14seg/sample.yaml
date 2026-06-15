@@ -1,0 +1,21 @@
+sample:
+  description: Demonstration of auxdisplay driver for segment displays
+  name: Auxiliary (segment) display sample
+tests:
+  sample.drivers.auxdisplay_digits:
+    tags: auxdisplay
+    platform_allow:
+      - native_sim
+    integration_platforms:
+      - native_sim
+    build_only: true
+
+sample:
+  description: Demonstration of auxdisplay driver for 14 segment lcd display with points and bars.
+  name: STM32 14seg Glass LCD Auxdisplay Sample
+tests:
+  sample.drivers.auxdisplay.auxdisplay_14seg:
+    tags: drivers auxdisplay
+    platform_allow: stm32l476g_disco
+    integration_platforms:
+      - stm32l476g_disco

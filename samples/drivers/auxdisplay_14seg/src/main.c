@@ -10,21 +10,16 @@
 #include <zephyr/drivers/auxdisplay.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(auxdisplay_sample_stm32l476g_disco, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(auxdisplay_st_stm32_glass_lcd, LOG_LEVEL_DBG);
 
 int main(void)
 {
-	printk("Aux Display 1! %s\n", CONFIG_BOARD_TARGET);
-	//int rc;
+	LOG_INF("Board target: %s", CONFIG_BOARD_TARGET);
+	LOG_INF("STM32L476G Discovery 14Seg Glass LCD Sample Application");
 	
-	//const struct device *const dev = DEVICE_DT_GET(DT_NODELABEL(auxdisplay_0));
 	/* Retrieve the LCD device structure using the chosen node from Devicetree */
 	const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_auxdisplay));
-
-	LOG_INF("STM32L476G Discovery Glass LCD Test Application");
 	
-	//uint8_t data[64];
-
 	/* Verify if the device structure is populated and properly instantiated */
 	if (dev == NULL) {
 		LOG_ERR("Could not find the chosen auxdisplay device node");
@@ -37,7 +32,7 @@ int main(void)
 		return -EBUSY;
 	}
 
-	LOG_INF("LCD device is ready. Writing string payload...");
+	LOG_INF("LCD device ready");
 
 	/* 
 	 * Send a test string to the 14-segment glass display using standard Zephyr API.
@@ -51,56 +46,61 @@ int main(void)
 	}
 
 	LOG_INF("String successfully written to the display!");
-
 	k_msleep(500);
-
-	// rc = auxdisplay_cursor_set_enabled(dev, true);
-
-	// if (rc != 0) {
-	// 	LOG_ERR("Failed to enable cursor: %d", rc);
-	// }
-
-	// snprintk(data, sizeof(data), "Hello world from %s", CONFIG_BOARD);
-	// rc = auxdisplay_write(dev, data, strlen(data));
-	// if (rc != 0) {
-	// 	LOG_ERR("Failed to write data: %d", rc);
-	// 	return -3;
-	// }
 
     auxdisplay_clear(dev);
     k_msleep(500);
 
 	const char *msg_all = "\xFF;\xFF;\xFF;\xFF;\xFF;\xFF\xF";
-
-	const char *msg1 = "1.2:3;A\xB5\xFF;";
-	const char *msg2 = " . . . . . \x1";
-	const char *msg3 = " : : : : : \x2";
-	const char *msg4 = " ; ; ; ; ; \x3";
+	const char *msg_special_chars = "dm\xB5n  ";
+	const char *msg_alpha_1 = "ABCDEF";
+	const char *msg_alpha_2 = "GHIJKL";
+	const char *msg_alpha_3 = "MNOPQR";
+	const char *msg_alpha_4 = "TUVWXY";
+	const char *msg_alpha_5 = "Zacioz";
+	const char *msg_operators = "+-*\xB0/%%";
+	const char *msg_dot_bar        = " . . . . . \x1";
+	const char *msg_double_dot_bar = " : : : : : \x2";
+	const char *msg_triple_dot_bar = " ; ; ; ; ; \x3";
 
     while (1) {
         auxdisplay_write(dev, (uint8_t *)msg_all, strlen(msg_all));
         k_msleep(1000);
 
-		auxdisplay_write(dev, (uint8_t *)msg1, strlen(msg1));
+		auxdisplay_write(dev, (uint8_t *)msg_special_chars, strlen(msg_special_chars));
         k_msleep(1000);
         
+		auxdisplay_write(dev, (uint8_t *)msg_alpha_1, strlen(msg_alpha_1));
+        k_msleep(1000);
+		auxdisplay_write(dev, (uint8_t *)msg_alpha_2, strlen(msg_alpha_2));
+        k_msleep(1000);
+		auxdisplay_write(dev, (uint8_t *)msg_alpha_3, strlen(msg_alpha_3));
+        k_msleep(1000);
+		auxdisplay_write(dev, (uint8_t *)msg_alpha_4, strlen(msg_alpha_4));
+        k_msleep(1000);
+		auxdisplay_write(dev, (uint8_t *)msg_alpha_5, strlen(msg_alpha_5));
+        k_msleep(1000);
+		auxdisplay_write(dev, (uint8_t *)msg_operators, strlen(msg_operators));
+        k_msleep(1000);
+
 		for (int i = 0; i < 3; i++) {
-			auxdisplay_write(dev, (uint8_t *)msg2, strlen(msg2));
+			auxdisplay_write(dev, (uint8_t *)msg_dot_bar, strlen(msg_dot_bar));
 			k_msleep(500);
 
-			auxdisplay_write(dev, (uint8_t *)msg3, strlen(msg3));
+			auxdisplay_write(dev, (uint8_t *)msg_double_dot_bar, strlen(msg_double_dot_bar));
 			k_msleep(500);
 
-			auxdisplay_write(dev, (uint8_t *)msg4, strlen(msg4));
+			auxdisplay_write(dev, (uint8_t *)msg_triple_dot_bar, strlen(msg_triple_dot_bar));
 			k_msleep(500);
 		}
 		k_msleep(500);
 
+		/* Bars: from 0 to 15 */
 		uint8_t msg_bar[6*2+1];
 		msg_bar[0] = 'B';
 		msg_bar[1] = 'A';
 		msg_bar[2] = 'R';
-		msg_bar[3] = ' ';
+		msg_bar[3] = 'S';
 		msg_bar[7] = 0;
 		for (int i = 0; i < 16; i++) {
 			msg_bar[4] = i > 9 ? '1' : ' ';
@@ -111,6 +111,7 @@ int main(void)
 		}
 		k_msleep(500);
 
+		/* Bars: from 0% to 100%, step 25% */
 		msg_bar[7] = 0;
 		for (int i = 0; i < 5; i++) {
 			sprintf(msg_bar, "%3d\xB0/%%", i*25);
