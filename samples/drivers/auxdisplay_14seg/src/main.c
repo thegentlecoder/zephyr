@@ -56,12 +56,12 @@ int main(void)
 	const char *msg_alpha_1 = "ABCDEF";
 	const char *msg_alpha_2 = "GHIJKL";
 	const char *msg_alpha_3 = "MNOPQR";
-	const char *msg_alpha_4 = "TUVWXY";
-	const char *msg_alpha_5 = "Zacioz";
+	const char *msg_alpha_4 = "STUVWX";
+	const char *msg_alpha_5 = "YZacoz";
 	const char *msg_operators = "+-*\xB0/%%";
 	const char *msg_dot_bar        = " . . . . . \x1";
-	const char *msg_double_dot_bar = " : : : : : \x2";
-	const char *msg_triple_dot_bar = " ; ; ; ; ; \x3";
+	const char *msg_double_dot_bar = " : : : : : \x6";
+	const char *msg_triple_dot_bar = " ; ; ; ; ; \x7";
 
     while (1) {
         auxdisplay_write(dev, (uint8_t *)msg_all, strlen(msg_all));
