@@ -54,7 +54,8 @@ Open points
 ***********
 
 - apply zephyr project's coding rules
+- implement auxdisplay_display_on and off
+- implement auxdisplay_display_position_set and get
 - add drivers\auxdisplay\auxdisplay_st_stm32_glass_lcd.h to export 
   some character definition and adapt main.c to use them
-- simplify usage of SEG/COM definitions
 - snow demo with segments
