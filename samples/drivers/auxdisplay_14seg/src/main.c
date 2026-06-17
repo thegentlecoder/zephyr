@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Jamie McCrae
+ * Copyright (c) 2026 Renato Mauro
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,7 +10,7 @@
 #include <zephyr/drivers/auxdisplay.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(auxdisplay_st_stm32_glass_lcd, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(auxdisplay_sample, LOG_LEVEL_DBG);
 
 int main(void)
 {
@@ -38,8 +38,8 @@ int main(void)
 	 * Send a test string to the 14-segment glass display using standard Zephyr API.
 	 * The driver handles the character decoding matrix in background.
 	 */
-	const char *test_msg = "ZEPHYR";
-	int ret = auxdisplay_write(dev, (const uint8_t *)test_msg, strlen(test_msg));
+	const char *msg_zephyr = "ZEPHYR";
+	int ret = auxdisplay_write(dev, (const uint8_t *)msg_zephyr, strlen(msg_zephyr));
 	if (ret < 0) {
 		LOG_ERR("Failed to write to the auxdisplay device (err: %d)", ret);
 		return ret;

@@ -26,11 +26,12 @@
 
 	/* We target the core SoC bus to declare the missing peripheral hardware block */
 	soc {
-		glass_lcd: lcd@40002400 {
-			compatible = "st,stm32-glass-lcd";
+		glass_lcd: gh08172t@40002400 {
+			compatible = "st,gh08172t";
 			status = "okay";
 
 			reg = <0x40002400 0x400>;
+			reg-count = <16>;
 
 			clocks = <&rcc STM32_CLOCK(APB1, 24)>,
 				 <&rcc STM32_SRC_LSE RTC_SEL(1)>;

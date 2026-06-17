@@ -1,12 +1,14 @@
-# Copyright (c) 2026 Your Name
+#
+# Copyright (c) 2026 Renato Mauro
+#
 # SPDX-License-Identifier: Apache-2.0
-
-description: |
-  STM32 Internal Segment LCD Controller (Glass Display Interface).
+#
+description: 
+  GH08172T 14 Segment LCD Controller (Glass Display Interface).
   This binding describes the internal liquid crystal display controller peripheral 
   present on STM32 microcontrollers, mapped to a 14-segment auxiliary text interface.
 
-compatible: "st,stm32-glass-lcd"
+compatible: "st,gh08172t"
 
 include: [base.yaml, auxdisplay-device.yaml, pinctrl-device.yaml]
 
@@ -14,6 +16,11 @@ properties:
   reg:
     required: true
     description: Base address and length of the LCD peripheral register block.
+
+  reg-count:
+    required: true
+    type: int
+    description: Number of LCD peripheral registers.
 
   clocks:
     required: true

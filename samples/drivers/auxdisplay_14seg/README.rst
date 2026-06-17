@@ -38,12 +38,12 @@ ORI boards/st/stm32l476g_disco/stm32l476g_disco.dts
 
 MOD drivers/auxdisplay/CMakeLists.txt
 MOD drivers/auxdisplay/Kconfig
-ADD drivers/auxdisplay/Kconfig.st_stm32_glass_lcd
-ADD drivers/auxdisplay/auxdisplay_st_stm32_glass_lcd.c
+ADD drivers/auxdisplay/Kconfig.gh08172t
+ADD drivers/auxdisplay/auxdisplay_gh08172t.c
 
-ADD dts/bindings/auxdisplay/st,stm32-glass-lcd.yaml
+ADD dts/bindings/auxdisplay/st,gh08172t.yaml
 
-ADD samples/drivers/auxdisplay_14seg/board/stm32l476g_disco.overlay
+ADD samples/drivers/auxdisplay_14seg/boards/stm32l476g_disco.overlay
 ADD samples/drivers/auxdisplay_14seg/src/main.c
 ADD samples/drivers/auxdisplay_14seg/CMakeLists.txt
 ADD samples/drivers/auxdisplay_14seg/prj.conf
