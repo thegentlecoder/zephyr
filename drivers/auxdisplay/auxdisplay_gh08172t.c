@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT st_stm32_glass_lcd
+#define DT_DRV_COMPAT st_gh08172t
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -19,7 +19,7 @@
  * The LCD display is GH08172T.
  */
 
-LOG_MODULE_REGISTER(auxdisplay_stm32_glass_lcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
+LOG_MODULE_REGISTER(auxdisplay_gh08172t, CONFIG_AUXDISPLAY_LOG_LEVEL);
 
 /* Supported characters
 
@@ -49,7 +49,7 @@ LOG_MODULE_REGISTER(auxdisplay_stm32_glass_lcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
  * Values from 0 to 9 are based on the '0' character.
  * Values from 10 to 15 are based on the 'A' character. 
  */
-enum lcd_bar_value
+enum auxdisplay_gh08172t_bar_value
 {
   LCD_BAR_0 = 0x00,
   LCD_BAR_OFF = LCD_BAR_0,
@@ -84,7 +84,7 @@ enum lcd_bar_value
 /**
   * @brief LCD Glass digit position
   */
-enum lcd_digit_position
+enum auxdisplay_gh08172t_digit_position
 {
   LCD_DIGIT_POSITION_1 = 0,
   LCD_DIGIT_POSITION_2 = 1,
@@ -177,7 +177,7 @@ MSB   { 1 , 1 , 0 , 0 }
 
 n is a positive even number, whose value is n = 2 * (Pos - 1):
 
-POS          |  1 |  2 |  3 |  4 |  5 |  6 |
+ POS          |  1 |  2 |  3 |  4 |  5 |  6 |
  --------------------------------------------
  n  2*(Pos-1) |  0 |  2 |  4 |  6 |  8 | 10 |
  --------------------------------------------
@@ -189,13 +189,13 @@ POS          |  1 |  2 |  3 |  4 |  5 |  6 |
 
 BARS
 
-|      Graphic Bar    |   Segment   | Common |   RAM    |
-|      (position)     |  (MCU pin)  |   pin  | Register |
-|-------------------------------------------------------|
-| BAR3 (top)          | SEG9  (PC7) |  COM2  |    4     |
-| BAR2 (middle-upper) | SEG9  (PC7) |  COM3  |    6     |
-| BAR1 (middle-lower) | SEG11 (PB4) |  COM2  |    4     |
-| BAR0 (bottom)       | SEG11 (PB4) |  COM3  |    6     |
+|      Graphic Bar    |   Segment   | Common |
+|      (position)     |  (MCU pin)  |  pin   |
+----------------------------------------------
+| BAR3 (top)          | SEG9  (PC7) |  COM2  |
+| BAR2 (middle-upper) | SEG9  (PC7) |  COM3  |
+| BAR1 (middle-lower) | SEG11 (PB4) |  COM2  |
+| BAR0 (bottom)       | SEG11 (PB4) |  COM3  |
 
 Position 0
 
@@ -266,14 +266,14 @@ GPIO port to LCD pin to LCD crystal, sorted by LCD pin:
  more than 32 bits; so, if bits 0-31 are driven by COM0, bits 
  32-63 (actually, in ST code, 38 for segments and 43 for shifts)
  are driven by a second register, named COM0_1. This means that
- a logical 63 bit set is handled via two 32 bit set driven by
+ a logical 63 bit set is handled via two 32 bit sets driven by
  two registers. This happens for positions 4 and 5 only.
 
   @endverbatim
 */
 
 /* Constant table for cap characters 'A' --> 'Z' */
-const uint16_t CapLetterMap[26]=
+const uint16_t auxdisplay_gh08172t_cap_letter_map[26]=
     {
         /* A       B       C       D       E       F       G       H       I  */
         0xFE00, 0x6714, 0x1D00, 0x4714, 0x9D00, 0x9C00, 0x3F00, 0xFA00, 0x0014,
@@ -284,7 +284,7 @@ const uint16_t CapLetterMap[26]=
     };
 
 /* Constant table for number '0' --> '9' */
-const uint16_t NumberMap[10]=
+const uint16_t auxdisplay_gh08172t_number_map[10]=
     {
         /* 0      1      2      3      4      5      6      7      8      9  */
         0x5FC0,0x4200,0xF500,0x6700,0xEa00,0xAF00,0xBF00,0x04600,0xFF00,0xEF00
@@ -624,8 +624,8 @@ enum lcd_point
 	POINT_TRIPLE
 };
 
-static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit);
-static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value);
+static void auxdisplay_gh08172t_convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit);
+static void auxdisplay_gh08172t_write_char(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value);
 
 /**
   * @brief  Convert an ascii char to the an LCD digit, handling points and bars too.
@@ -638,7 +638,7 @@ static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uin
   * @param  digit : output, digit frame buffer (length is NIBBLE_BUFFER_LEN).
   * @retval None
   */
-static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit)
+static void auxdisplay_gh08172t_convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_value, uint32_t* digit)
 {
   uint16_t ch = 0 ;
   uint8_t loop = 0, index = 0;
@@ -709,19 +709,19 @@ static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_v
     case '7':
     case '8':
     case '9':      
-      ch = NumberMap[Char - ASCII_CHAR_0];    
+      ch = auxdisplay_gh08172t_number_map[Char - ASCII_CHAR_0];    
       break;
           
     default:
       /* The character Char is one letter in upper case*/
       if ( (Char < ASCII_CHAR_LEFT_OPEN_BRACKET) && (Char > ASCII_CHAR_AT_SYMBOL) )
       {
-        ch = CapLetterMap[Char - 'A'];
+        ch = auxdisplay_gh08172t_cap_letter_map[Char - 'A'];
       }
       /* The character Char is one letter in lower case*/
       if ( (Char < ASCII_CHAR_LEFT_OPEN_BRACE) && ( Char > ASCII_CHAR_APOSTROPHE) )
       {
-        ch = CapLetterMap[Char - 'a'];
+        ch = auxdisplay_gh08172t_cap_letter_map[Char - 'a'];
       }
       break;
   }
@@ -766,11 +766,11 @@ static void Convert(uint8_t Char, uint8_t position, uint8_t point, uint8_t bar_v
   * @param  bar_value: the value (enum lcd_bar_value) to display with bars, in position 6 only.
   * @retval None
   */
-static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value)
+static void auxdisplay_gh08172t_write_char(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uint8_t point, uint8_t bar_value)
 {
   /* To convert displayed character in segment in array digit */
   uint32_t digit[NIBBLE_BUFFER_LEN];
-  Convert(ch, position, point, bar_value, digit);
+  auxdisplay_gh08172t_convert(ch, position, point, bar_value, digit);
 
   uint32_t data = 0x00;
   switch (position)
@@ -920,8 +920,9 @@ static void WriteChar(LCD_HandleTypeDef *hlcd, uint8_t ch, uint8_t position, uin
 }
 
 /* Immutabile driver configuration structure stored in Flash */
-struct stm32_lcd_config {
+struct auxdisplay_gh08172t_config {
 	LCD_TypeDef *regs;
+  int reg_count;
 	const struct stm32_pclken *pclken;
 	const struct device *clk_dev;
 	const struct pinctrl_dev_config *pcfg;
@@ -930,13 +931,13 @@ struct stm32_lcd_config {
 };
 
 /* Mutable driver runtime instance data structure stored in RAM */
-struct stm32_lcd_data {
+struct auxdisplay_gh08172t_data {
 	LCD_HandleTypeDef hlcd;
 };
 
-static int stm32_lcd_capabilities_get(const struct device *dev, struct auxdisplay_capabilities *capabilities)
+static int auxdisplay_gh08172t_capabilities_get(const struct device *dev, struct auxdisplay_capabilities *capabilities)
 {
-    const struct stm32_lcd_config *config = dev->config;
+    const struct auxdisplay_gh08172t_config *config = dev->config;
     if (!capabilities) return -EINVAL;
 
 	  capabilities->columns = config->columns;
@@ -945,18 +946,18 @@ static int stm32_lcd_capabilities_get(const struct device *dev, struct auxdispla
 	  return 0;
 }
 
-static int stm32_lcd_clear(const struct device *dev)
+static int auxdisplay_gh08172t_clear(const struct device *dev)
 {
-    struct stm32_lcd_data *data = dev->data;
+    struct auxdisplay_gh08172t_data *data = dev->data;
     HAL_LCD_Clear(&data->hlcd);
     return 0;
 }
 
 /* Zephyr Auxdisplay API interface callback: write operation */
-static int stm32_lcd_aux_write(const struct device *dev, const uint8_t *data, uint16_t len)
+static int auxdisplay_gh08172t_write(const struct device *dev, const uint8_t *data, uint16_t len)
 {
-	const struct stm32_lcd_config *config = dev->config;
-	struct stm32_lcd_data *driver_data = dev->data;
+	const struct auxdisplay_gh08172t_config *config = dev->config;
+	struct auxdisplay_gh08172t_data *driver_data = dev->data;
 
 	/* Clear the entire LCD memory structure before rendering the updated text payload. */
 	//HAL_LCD_Clear(&driver_data->hlcd);
@@ -992,7 +993,7 @@ static int stm32_lcd_aux_write(const struct device *dev, const uint8_t *data, ui
 				i++;
 			}
 		}
-		WriteChar(&driver_data->hlcd, Char, position, point, bar_value);
+		auxdisplay_gh08172t_write_char(&driver_data->hlcd, Char, position, point, bar_value);
 	}
 
 	/* Fire a hardware request telling the peripheral controller to push internal RAM data to the glass. */
@@ -1002,28 +1003,28 @@ static int stm32_lcd_aux_write(const struct device *dev, const uint8_t *data, ui
 }
 
 /* Map implementation functions to the standard public Zephyr auxdisplay API architecture interface. */
-static const struct auxdisplay_driver_api stm32_lcd_aux_api = {
-	.capabilities_get = stm32_lcd_capabilities_get,
-	.clear = stm32_lcd_clear,
-	.write = stm32_lcd_aux_write,
+static const struct auxdisplay_driver_api auxdisplay_gh08172t_api = {
+	.capabilities_get = auxdisplay_gh08172t_capabilities_get,
+	.clear = auxdisplay_gh08172t_clear,
+	.write = auxdisplay_gh08172t_write,
 };
 
 /* Core device initialization logic executed automatically by the Zephyr kernel boot sequencer. */
-static int stm32_lcd_aux_init(const struct device *dev)
+static int auxdisplay_gh08172t_init(const struct device *dev)
 {
-	const struct stm32_lcd_config *config = dev->config;
-	struct stm32_lcd_data *driver_data = dev->data;
+	const struct auxdisplay_gh08172t_config *config = dev->config;
+	struct auxdisplay_gh08172t_data *driver_data = dev->data;
 	int ret;
 
 	/* 1. Request clock gating initialization from the generic Zephyr device sub-system tree. */
 	if (!device_is_ready(config->clk_dev)) {
-		LOG_ERR("STM32 Clock Control driver device is not ready");
+		LOG_ERR("Clock Control driver device is not ready");
 		return -ENODEV;
 	}
 
 	ret = clock_control_on(config->clk_dev, (clock_control_subsys_t)config->pclken);
 	if (ret < 0) {
-		LOG_ERR("Failed to enable STM32 LCD peripheral clock gate (err: %d)", ret);
+		LOG_ERR("Failed to enable peripheral clock gate (err: %d)", ret);
 		return ret;
 	}
 
@@ -1057,45 +1058,46 @@ static int stm32_lcd_aux_init(const struct device *dev)
 
 	HAL_StatusTypeDef init_res = HAL_LCD_Init(&driver_data->hlcd);
 	if ( init_res != HAL_OK) {
-		LOG_ERR("STM32 HAL_LCD_Init execution failure encountered");
-		LOG_DBG("DEBUG LCD: RCC_BDCR=0x%08X, LCD_CR=0x%08X, LCD_SR=0x%08X, init_res=%d\n", RCC->BDCR, LCD->CR, LCD->SR, init_res);
+		LOG_ERR("HAL_LCD_Init execution failure encountered");
+		LOG_DBG("RCC_BDCR=0x%08X, LCD_CR=0x%08X, LCD_SR=0x%08X, init_res=%d\n", RCC->BDCR, LCD->CR, LCD->SR, init_res);
 		return -EIO;
 	}
 
 	/* Trigger hardware core initialization macros to start internal voltage pump generators. */
 	__HAL_LCD_ENABLE(&driver_data->hlcd);
 
-	LOG_INF("STM32 Segment LCD driver initialized successfully with %d digits", config->columns);
+	LOG_INF("GH08172T driver initialized successfully with %d digits", config->columns);
 	return 0;
 }
 
 /* Advanced Devicetree generation macro mapping compile-time definitions directly to C parameters */
-#define STM32_LCD_DEVICE_INIT(inst)                                             \
-	PINCTRL_DT_INST_DEFINE(inst);              									\
+#define AUXDISPLAY_GH08172T_DEVICE(inst)                                             \
+	PINCTRL_DT_INST_DEFINE(inst);             									\
 																				\
-	static const struct stm32_pclken stm32_lcd_pclken_##inst[] = {              \
+	static const struct stm32_pclken auxdisplay_gh08172t_pclken_##inst[] = {              \
 		STM32_DT_INST_CLOCK_INFO_BY_IDX(inst, 0)                                \
 	};																			\
 																				\
-	static const struct stm32_lcd_config stm32_lcd_config_##inst = {            \
+	static const struct auxdisplay_gh08172t_config auxdisplay_gh08172t_config_##inst = {            \
 		.regs = (LCD_TypeDef *)DT_INST_REG_ADDR(inst),                          \
-		.pclken = stm32_lcd_pclken_##inst,                                      \
+    .reg_count = DT_INST_PROP(inst, reg_count),                                 \
+		.pclken = auxdisplay_gh08172t_pclken_##inst,                                      \
 		.clk_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_IDX(inst, 0)),          \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                           \
 		.columns = DT_INST_PROP(inst, columns),                                 \
 		.rows = DT_INST_PROP(inst, rows),                                       \
 	};                                                                          \
 																				\
-	static struct stm32_lcd_data stm32_lcd_data_##inst;                         \
+	static struct auxdisplay_gh08172t_data auxdisplay_gh08172t_data_##inst;                         \
 																				\
 	DEVICE_DT_INST_DEFINE(inst,                                                 \
-			      stm32_lcd_aux_init,                                           \
+			      auxdisplay_gh08172t_init,                                           \
 			      NULL,                                                         \
-			      &stm32_lcd_data_##inst,                                       \
-			      &stm32_lcd_config_##inst,                                     \
+			      &auxdisplay_gh08172t_data_##inst,                                       \
+			      &auxdisplay_gh08172t_config_##inst,                                     \
 			      POST_KERNEL,                                                  \
 			      CONFIG_AUXDISPLAY_INIT_PRIORITY,                              \
-			      &stm32_lcd_aux_api);
+			      &auxdisplay_gh08172t_api);
 
 /* Parse the active devicetree layout and execute the instantiation macro for matching okay targets. */
-DT_INST_FOREACH_STATUS_OKAY(STM32_LCD_DEVICE_INIT)
+DT_INST_FOREACH_STATUS_OKAY(AUXDISPLAY_GH08172T_DEVICE)
