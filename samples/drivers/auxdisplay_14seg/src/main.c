@@ -29,7 +29,7 @@ int main(void)
 	LOG_INF("STM32L476G Discovery 14Seg Glass LCD Sample Application");
 
 	/* Retrieve the LCD device structure using the chosen node from Devicetree */
-	const struct device *dev = DEVICE_DT_GET(DT_NODELABEL(glass_lcd));
+	const struct device *dev = DEVICE_DT_GET(DT_NODELABEL(auxdisplay_0));
 
 	/* Verify if the device structure is populated and properly instantiated */
 	if (dev == NULL) {
@@ -87,7 +87,7 @@ int main(void)
 	const char *msg_alpha_num_5 = "YZ0123";
 	const char *msg_alpha_num_6 = "456789";
 	const char *msg_unit_prefixes = "dcmun ";
-	const char *msg_operators = "+-*/  ";
+	const char *msg_operators_and_degree = "+-*/ ^";
 	/* The percentage symbol is three positions wide and includes the degree symbol */
 	const char *msg_symbols = "%_()";
 	const char *msg_dot_bar = " . . . . . \x1";
@@ -112,7 +112,8 @@ int main(void)
 		auxdisplay_write(dev, (const uint8_t *)msg_unit_prefixes,
 				 strlen(msg_unit_prefixes));
 		k_msleep(1000);
-		auxdisplay_write(dev, (const uint8_t *)msg_operators, strlen(msg_operators));
+		auxdisplay_write(dev, (const uint8_t *)msg_operators_and_degree,
+				 strlen(msg_operators_and_degree));
 		k_msleep(1000);
 		auxdisplay_write(dev, (const uint8_t *)msg_symbols, strlen(msg_symbols));
 		k_msleep(1000);

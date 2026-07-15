@@ -176,3 +176,21 @@
 &sai1 {
 	status = "okay";
 };
+
+/* SLCD configuration */
+&slcd {
+	pin-list = <16 17 18 19 20 21 22 23 24 25 26 27>;
+	com-list = <28 29 30 31>;
+	pinctrl-0 = <&lcd_seg23_pa6 &lcd_seg0_pa7 &lcd_com0_pa8
+		     &lcd_com1_pa9 &lcd_com2_pa10 &lcd_seg10_pa15
+		     &lcd_seg21_pb0 &lcd_seg2_pb1 &lcd_seg11_pb4
+		     &lcd_seg12_pb5 &lcd_com3_pb9 &lcd_seg20_pb12
+		     &lcd_seg3_pb13 &lcd_seg19_pb14 &lcd_seg4_pb15
+		     &lcd_vlcd_pc3 &lcd_seg22_pc4 &lcd_seg1_pc5
+		     &lcd_seg14_pc6 &lcd_seg9_pc7 &lcd_seg13_pc8
+		     &lcd_seg18_pd8 &lcd_seg5_pd9 &lcd_seg17_pd10 &lcd_seg6_pd11
+		     &lcd_seg16_pd12 &lcd_seg7_pd13 &lcd_seg15_pd14 &lcd_seg8_pd15>;
+	pinctrl-names = "default";
+	lcd-timeout-ms = <1000>;
+	status = "disabled";
+};

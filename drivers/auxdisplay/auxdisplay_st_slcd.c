@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT st_gh08172t
+#define DT_DRV_COMPAT st_slcd
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -16,12 +16,14 @@
 #include <stm32_ll_bus.h>
 #include <zephyr/sys/time_units.h>
 
+#include "auxdisplay_slcd_config.h"
+
 /* This driver is for stm32l476g_discovery REVB or REVC only,
  * thus REVA is not supported.
  * The LCD display is GH08172T.
  */
 
-LOG_MODULE_REGISTER(auxdisplay_gh08172t, CONFIG_AUXDISPLAY_LOG_LEVEL);
+LOG_MODULE_REGISTER(auxdisplay_st_slcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
 
 /* ST modules to refer for definitions:
  * - /deps/modules/hal/stm32/stm32cube/stm32l4xx/soc/stm32l4xx.h
@@ -45,25 +47,22 @@ LOG_MODULE_REGISTER(auxdisplay_gh08172t, CONFIG_AUXDISPLAY_LOG_LEVEL);
 /* The percentage symbol is translated into three display positions.
  * It is made by a degree sign, a slash and a low ring.
  */
-#define GH08172T_PERCENTAGE_SYMBOL_POSITIONS 3
+#define SLCD_PERCENTAGE_SYMBOL_POSITIONS 3
 
 /* The degree sign is passed as the ^ ASCII character */
-#define GH08172T_ASCII_CHAR_DEGREE_SIGN 0x5E /* '^' */
+#define SLCD_ASCII_CHAR_DEGREE_SIGN 0x5E /* '^' */
 
 /* All the segments in a position, but the dots.
  * This character is passed as the # ASCII character.
  */
-#define GH08172T_ASCII_CHAR_FULL 0x23
+#define SLCD_ASCII_CHAR_FULL 0x23
 
-#define GH08172T_ASCII_DOT        0x2E /* '.' */
-#define GH08172T_ASCII_DOUBLE_DOT 0x3A /* ':' */
-#define GH08172T_ASCII_TRIPLE_DOT 0x3B /* ';' */
+#define SLCD_ASCII_DOT        0x2E /* '.' */
+#define SLCD_ASCII_DOUBLE_DOT 0x3A /* ':' */
+#define SLCD_ASCII_TRIPLE_DOT 0x3B /* ';' */
 
-/* LCD bars are handled as 4 bits, from 0 to 15.
- * Values from 0 to 9 are based on the '0' character.
- * Values from 10 to 15 are based on the 'A' character.
- */
-enum auxdisplay_gh08172t_bar_value {
+/* LCD bars are handled as 4 bits, passed as ASCII 0 to 15 */
+enum auxdisplay_slcd_4_bar_value {
 	GH08172T_BAR_0 = 0x00,
 	GH08172T_BAR_OFF = GH08172T_BAR_0,
 	GH08172T_BAR_EMPTY = GH08172T_BAR_0,
@@ -95,7 +94,7 @@ enum auxdisplay_gh08172t_bar_value {
 };
 
 /* LCD Glass digit position */
-enum auxdisplay_gh08172t_digit_position {
+enum auxdisplay_slcd_digit_position { /* delete */
 	GH08172T_DIGIT_POSITION_1 = 0,
 	GH08172T_DIGIT_POSITION_2 = 1,
 	GH08172T_DIGIT_POSITION_3 = 2,
@@ -125,7 +124,7 @@ enum auxdisplay_gh08172t_digit_position {
  *    B13    |  SEG03
  *    B14    |  SEG19
  *    B15    |  SEG04
- *    C03    |  VLCD
+ *    C03    |  VLCD  *
  *    C04    |  SEG22
  *    C05    |  SEG01
  *    C06    |  SEG14
@@ -139,6 +138,9 @@ enum auxdisplay_gh08172t_digit_position {
  *    D13    |  SEG07
  *    D14    |  SEG15
  *    D15    |  SEG08
+ *
+ *  C03 is not connected to an LCD pin, but has to be activated as AF11 to make
+ *  sure the LCD is well driven by the MCU LCD controller.
  *
  *  GLASS LCD MAPPING
  *  The LCD has six 14-segment digits with point/colon and 4 bars:
@@ -233,41 +235,41 @@ enum auxdisplay_gh08172t_digit_position {
  *
  *
  *  Summary for all positions
- *  GPIO port to LCD pin to LCD crystal, sorted by LCD pin:
+ *  LCD pin to LCD crystal, sorted by LCD pin:
  *
- *  | STM8L | STM32 | LCD   | LCD | COM3 | COM2 | COM1 | COM0 |
- *  | DISCO | L476G | Pin   | Pin |      |      |      |      |
- *  | GPIO  | DISCO | name  |     |      |      |      |      |
- *  |       | GPIO  |       |     |      |      |      |      |
- *  -----------------------------------------------------------
- *  |  PA7  |  A06  | SEG0  |   1 |  1N  |  1P  |  1D  |  1E  |
- *  |  PE0  |  C04  | SEG1  |   2 | 1DP  | 1COL |  1C  |  1M  |
- *  |  PE1  |  B00  | SEG2  |   3 |  2N  |  2P  |  2D  |  2E  |
- *  |  PE2  |  B12  | SEG3  |   4 | 2DP  | 2COL |  2C  |  2M  |
- *  |  PE3  |  B14  | SEG4  |   5 |  3N  |  3P  |  3D  |  3E  |
- *  |  PE4  |  D08  | SEG5  |   6 | 3DP  | 3COL |  3C  |  3M  |
- *  |  PE5  |  D10  | SEG6  |   7 |  4N  |  4P  |  4D  |  4E  |
- *  |  PD0  |  D12  | SEG7  |   8 | 4DP  | 4COL |  4C  |  4M  |
- *  |  PD2  |  D14  | SEG8  |   9 |  5N  |  5P  |  5D  |  5E  |
- *  |  PD3  |  C06  | SEG9  |  10 | BAR2 | BAR3 |  5C  |  5M  |
- *  |  PB0  |  C08  | SEG10 |  11 |  6N  |  6P  |  6D  |  6E  |
- *  |  PB1  |  B05  | SEG11 |  12 | BAR0 | BAR1 |  6C  |  6M  |
- *  |  PD1  |  A08  | COM3  |  13 | COM3 |      |      |      |
- *  |  PA6  |  A09  | COM2  |  14 |      | COM2 |      |      |
- *  |  PA5  |  A10  | COM1  |  15 |      |      | COM1 |      |
- *  |  PA4  |  B09  | COM0  |  16 |      |      |      | COM0 |
- *  |  PB2  |  B04  | SEG12 |  17 |  6J  |  6K  |  6A  |  6B  |
- *  |  PB3  |  A15  | SEG13 |  18 |  6H  |  6Q  |  6F  |  6G  |
- *  |  PB4  |  C07  | SEG14 |  19 |  5J  |  5K  |  5A  |  5B  |
- *  |  PB5  |  D15  | SEG15 |  20 |  5H  |  5Q  |  5F  |  5G  |
- *  |  PB6  |  D13  | SEG16 |  21 |  4J  |  4K  |  4A  |  4B  |
- *  |  PB7  |  D11  | SEG17 |  22 |  4H  |  4Q  |  4F  |  4G  |
- *  |  PD4  |  D09  | SEG18 |  23 |  3J  |  3K  |  3A  |  3B  |
- *  |  PD5  |  B15  | SEG19 |  24 |  3H  |  3Q  |  3F  |  3G  |
- *  |  PD6  |  B13  | SEG20 |  25 |  2J  |  2K  |  2A  |  2B  |
- *  |  PD7  |  B01  | SEG21 |  26 |  2H  |  2Q  |  2F  |  2G  |
- *  |  PC2  |  C05  | SEG22 |  27 |  1J  |  1K  |  1A  |  1B  |
- *  |  PC3  |  A07  | SEG23 |  28 |  1H  |  1Q  |  1F  |  1G  |
+ *  | LCD   | LCD | COM3 | COM2 | COM1 | COM0 |
+ *  | Pin   | Pin |      |      |      |      |
+ *  | name  |     |      |      |      |      |
+ *  |       |     |      |      |      |      |
+ *  -------------------------------------------
+ *  | SEG0  |   1 |  1N  |  1P  |  1D  |  1E  |
+ *  | SEG1  |   2 | 1DP  | 1COL |  1C  |  1M  |
+ *  | SEG2  |   3 |  2N  |  2P  |  2D  |  2E  |
+ *  | SEG3  |   4 | 2DP  | 2COL |  2C  |  2M  |
+ *  | SEG4  |   5 |  3N  |  3P  |  3D  |  3E  |
+ *  | SEG5  |   6 | 3DP  | 3COL |  3C  |  3M  |
+ *  | SEG6  |   7 |  4N  |  4P  |  4D  |  4E  |
+ *  | SEG7  |   8 | 4DP  | 4COL |  4C  |  4M  |
+ *  | SEG8  |   9 |  5N  |  5P  |  5D  |  5E  |
+ *  | SEG9  |  10 | BAR2 | BAR3 |  5C  |  5M  |
+ *  | SEG10 |  11 |  6N  |  6P  |  6D  |  6E  |
+ *  | SEG11 |  12 | BAR0 | BAR1 |  6C  |  6M  |
+ *  | COM3  |  13 | COM3 |      |      |      |
+ *  | COM2  |  14 |      | COM2 |      |      |
+ *  | COM1  |  15 |      |      | COM1 |      |
+ *  | COM0  |  16 |      |      |      | COM0 |
+ *  | SEG12 |  17 |  6J  |  6K  |  6A  |  6B  |
+ *  | SEG13 |  18 |  6H  |  6Q  |  6F  |  6G  |
+ *  | SEG14 |  19 |  5J  |  5K  |  5A  |  5B  |
+ *  | SEG15 |  20 |  5H  |  5Q  |  5F  |  5G  |
+ *  | SEG16 |  21 |  4J  |  4K  |  4A  |  4B  |
+ *  | SEG17 |  22 |  4H  |  4Q  |  4F  |  4G  |
+ *  | SEG18 |  23 |  3J  |  3K  |  3A  |  3B  |
+ *  | SEG19 |  24 |  3H  |  3Q  |  3F  |  3G  |
+ *  | SEG20 |  25 |  2J  |  2K  |  2A  |  2B  |
+ *  | SEG21 |  26 |  2H  |  2Q  |  2F  |  2G  |
+ *  | SEG22 |  27 |  1J  |  1K  |  1A  |  1B  |
+ *  | SEG23 |  28 |  1H  |  1Q  |  1F  |  1G  |
  *
  *  Truly it's more complicated, because each COM is able to drive
  *  more than 32 bits; so, if bits 0-31 are driven by COM0, bits
@@ -278,7 +280,7 @@ enum auxdisplay_gh08172t_digit_position {
  */
 
 /* Constant table for cap characters 'A' --> 'Z' */
-const uint16_t auxdisplay_gh08172t_cap_letter_map[26] = {
+const uint16_t auxdisplay_slcd_cap_letter_map[26] = {
 	/* A       B       C       D       E       F       G       H       I  */
 	0xFE00, 0x6714, 0x1D00, 0x4714, 0x9D00, 0x9C00, 0x3F00, 0xFA00, 0x0014,
 	/* J       K       L       M       N       O       P       Q       R  */
@@ -287,57 +289,71 @@ const uint16_t auxdisplay_gh08172t_cap_letter_map[26] = {
 	0xAF00, 0x0414, 0x5b00, 0x18C0, 0x5A81, 0x00C9, 0x0058, 0x05C0};
 
 /* Constant table for number '0' --> '9' */
-const uint16_t auxdisplay_gh08172t_number_map[10] = {
+const uint16_t auxdisplay_slcd_number_map[10] = {
+	/* 0      1        2       3       4       5       6       7       8       9  */
+	0x5FC0, 0x4200, 0xF500, 0x6700, 0xEA00, 0xAF00, 0xBF00, 0x04600, 0xFF00, 0xEF00};
+
+/* Constant table for bars '\00' --> '\0F' */
+const uint16_t auxdisplay_slcd_bars_map[10] = {
 	/* 0      1        2       3       4       5       6       7       8       9  */
 	0x5FC0, 0x4200, 0xF500, 0x6700, 0xEA00, 0xAF00, 0xBF00, 0x04600, 0xFF00, 0xEF00};
 
 /* Pattern for ' ' character */
-#define GH08172T_C_SPACE_MAP ((uint16_t)0x0000)
+#define SLCD_C_SPACE_MAP ((uint16_t)0x0000)
 
 /* Pattern for '_' character */
-#define GH08172T_C_UNDERSCORE_MAP ((uint16_t)0x0100)
+#define SLCD_C_UNDERSCORE_MAP ((uint16_t)0x0100)
 
 /* Pattern for '(' character */
-#define GH08172T_C_OPEN_PAR_MAP ((uint16_t)0x0041)
+#define SLCD_C_OPEN_PAR_MAP ((uint16_t)0x0041)
 
 /* Pattern for ')' character */
-#define GH08172T_C_CLOSE_PAR_MAP ((uint16_t)0x0088)
+#define SLCD_C_CLOSE_PAR_MAP ((uint16_t)0x0088)
 
 /* Pattern for 'd' character */
-#define GH08172T_C_D_MAP ((uint16_t)0xF300)
+#define SLCD_C_D_MAP ((uint16_t)0xF300)
 
 /* Pattern for 'c' character */
-#define GH08172T_C_C_MAP ((uint16_t)0xB100)
+#define SLCD_C_C_MAP ((uint16_t)0xB100)
 
 /* Pattern for 'm' character */
-#define GH08172T_C_M_MAP ((uint16_t)0xB210)
+#define SLCD_C_M_MAP ((uint16_t)0xB210)
 
 /* Pattern for 'u' character */
-#define GH08172T_C_U_MAP ((uint16_t)0x1300)
+#define SLCD_C_U_MAP ((uint16_t)0x1300)
 
 /* Pattern for 'n' character */
-#define GH08172T_C_N_MAP ((uint16_t)0x2210)
+#define SLCD_C_N_MAP ((uint16_t)0x2210)
 
 /* Pattern for '*' character */
-#define GH08172T_C_STAR_MAP ((uint16_t)0xA0DD)
+#define SLCD_C_STAR_MAP ((uint16_t)0xA0DD)
 
 /* Pattern for '-' character */
-#define GH08172T_C_MINUS_MAP ((uint16_t)0xA000)
+#define SLCD_C_MINUS_MAP ((uint16_t)0xA000)
 
 /* Pattern for '+' character */
-#define GH08172T_C_PLUS_MAP ((uint16_t)0xA014)
+#define SLCD_C_PLUS_MAP ((uint16_t)0xA014)
 
 /* Pattern for '/' character */
-#define GH08172T_C_SLASH_MAP ((uint16_t)0x00C0)
+#define SLCD_C_SLASH_MAP ((uint16_t)0x00C0)
 
 /* Pattern for degree character */
-#define GH08172T_C_DEGREE_MAP ((uint16_t)0xEC00)
+#define SLCD_C_DEGREE_MAP ((uint16_t)0xEC00)
 
 /* Pattern for small o character */
-#define GH08172T_C_LOW_RING_MAP ((uint16_t)0xB300)
+#define SLCD_C_LOW_RING_MAP ((uint16_t)0xB300)
 
 /* Pattern for all character segments but points and bars */
-#define GH08172T_C_FULL_MAP ((uint16_t)0xFFDD)
+#define SLCD_C_FULL_MAP ((uint16_t)0xFFDD)
+
+/* Pattern for single dot */
+#define SLCD_C_SINGLE_DOT_MAP ((uint16_t)0x0002)
+
+/* Pattern for double dot */
+#define SLCD_C_DOUBLE_DOT_MAP ((uint16_t)0x0020)
+
+/* Pattern for triple dot */
+#define SLCD_C_TRIPLE_DOT_MAP ((uint16_t)0x0022)
 
 /* LCD Digit COM & SEG definitions */
 #define GH08172T_DIGIT1_COM0 GH08172T_COM0
@@ -791,12 +807,6 @@ const uint16_t auxdisplay_gh08172t_number_map[10] = {
 #define GH08172T_NIBBLE_BUFFER_LEN          5
 #define GH08172T_NIBBLE_BUFFER_BAR2_3_INDEX GH08172T_NIBBLE_BUFFER_LEN - 1
 
-#define GH08172T_ASCII_CHAR_0                 0x30 /* '0' */
-#define GH08172T_ASCII_CHAR_AT_SYMBOL         0x40 /* '@' */
-#define GH08172T_ASCII_CHAR_LEFT_OPEN_BRACKET 0x5B /* '[' */
-#define GH08172T_ASCII_CHAR_APOSTROPHE        0x60 /* '`' */
-#define GH08172T_ASCII_CHAR_LEFT_OPEN_BRACE   0x7B /* '(' */
-
 /* LCD Glass point
  * Element values correspond to LCD Glass point, for positions 1 to 4.
  */
@@ -819,13 +829,14 @@ struct gh08172t_register_address {
 #define GH08172T_RAM_ADDRESS(i) (mem_addr_t)(&config->lcd.ram[i])
 
 /* Immutabile driver configuration structure stored in Flash */
-struct auxdisplay_gh08172t_config {
-	struct auxdisplay_capabilities capabilities;
+struct auxdisplay_st_slcd_config {
 	const struct gh08172t_register_address lcd;
 	const struct stm32_pclken *pclken;
 	const struct device *clk_dev;
-	const struct pinctrl_dev_config *pcfg;
-	uint32_t lcd_timeout_us;
+	const struct pinctrl_dev_config *pincfg;
+	const uint32_t lcd_timeout_us;
+
+	struct auxdisplay_panel_config panel_config;
 };
 
 struct gh08172t_init_data {
@@ -846,7 +857,7 @@ struct gh08172t_init_data {
 };
 
 /* Mutable driver runtime instance data structure stored in RAM */
-struct auxdisplay_gh08172t_data {
+struct auxdisplay_st_slcd_data {
 	uint16_t character_x;
 	uint16_t character_y;
 };
@@ -864,34 +875,35 @@ struct auxdisplay_gh08172t_data {
 
 static void gh08172t_enable(const struct device *dev)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 
 	sys_set_bits(config->lcd.cr, GH08172T_CR_LCDEN_MASK);
 }
 
 static void gh08172t_disable(const struct device *dev)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 
 	sys_clear_bits(config->lcd.cr, GH08172T_CR_LCDEN_MASK);
 }
 
-static int auxdisplay_gh08172t_capabilities_get(const struct device *dev,
-						struct auxdisplay_capabilities *capabilities)
+static int auxdisplay_st_slcd_capabilities_get(const struct device *dev,
+					       struct auxdisplay_capabilities *capabilities)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 
 	if (!capabilities) {
 		return -EINVAL;
 	}
 
-	memcpy(capabilities, &config->capabilities, sizeof(struct auxdisplay_capabilities));
+	memcpy(capabilities, &config->panel_config.capabilities,
+	       sizeof(struct auxdisplay_capabilities));
 	return 0;
 }
 
 static int gh08172t_clear(const struct device *dev)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 	bool success;
 
 	/* Wait Until the LCD is ready */
@@ -912,7 +924,7 @@ static int gh08172t_clear(const struct device *dev)
 static int gh08172t_write_ram(const struct device *dev, uint32_t ram_register, uint32_t mask,
 			      uint32_t data)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 	bool success;
 	uint32_t current_val;
 	uint32_t new_val;
@@ -938,7 +950,7 @@ static int gh08172t_write_ram(const struct device *dev, uint32_t ram_register, u
 
 static int gh08172t_update_request(const struct device *dev)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 	bool success;
 
 	/* Clear the Update Display Done flag before starting the update display request */
@@ -962,64 +974,73 @@ static int gh08172t_update_request(const struct device *dev)
  * position:  the character LCD destination [1:6].
  * point:     a point or colon to display right after the character.
  *            Allowed in positions 1 to 4, ignored otherwise.
- *            Valid values: 0x0, GH08172T_ASCII_DOT, GH08172T_ASCII_DOUBLE_DOT,
- *            GH08172T_ASCII_TRIPLE_DOT
+ *            Valid values: 0x0, SLCD_ASCII_DOT, SLCD_ASCII_DOUBLE_DOT,
+ *            SLCD_ASCII_TRIPLE_DOT
  * bar_value: the value (enum lcd_bar_value) to display with bars, in position 6 only.
  * pattern:   output, pattern frame buffer (length is GH08172T_NIBBLE_BUFFER_LEN).
  */
 static void gh08172t_convert_char_to_pattern(uint8_t the_char, uint8_t position, uint8_t point,
 					     uint8_t bar_value, uint32_t *pattern)
 {
-	uint16_t ch = 0;
+	uint32_t map = 0;
 
 	switch (the_char) {
 	case ' ':
-		ch = GH08172T_C_SPACE_MAP;
+		map = SLCD_C_SPACE_MAP;
 		break;
 	case '_':
-		ch = GH08172T_C_UNDERSCORE_MAP;
+		map = SLCD_C_UNDERSCORE_MAP;
 		break;
 	case 'd':
-		ch = GH08172T_C_D_MAP;
+		map = SLCD_C_D_MAP;
 		break;
 	case 'c':
-		ch = GH08172T_C_C_MAP;
+		map = SLCD_C_C_MAP;
 		break;
 	case 'm':
-		ch = GH08172T_C_M_MAP;
+		map = SLCD_C_M_MAP;
 		break;
 	case 'u':
-		ch = GH08172T_C_U_MAP;
+		map = SLCD_C_U_MAP;
 		break;
 	case 'n':
-		ch = GH08172T_C_N_MAP;
+		map = SLCD_C_N_MAP;
 		break;
 	case '-':
-		ch = GH08172T_C_MINUS_MAP;
+		map = SLCD_C_MINUS_MAP;
 		break;
 	case '+':
-		ch = GH08172T_C_PLUS_MAP;
+		map = SLCD_C_PLUS_MAP;
 		break;
 	case '/':
-		ch = GH08172T_C_SLASH_MAP;
+		map = SLCD_C_SLASH_MAP;
 		break;
 	case '*':
-		ch = GH08172T_C_STAR_MAP;
+		map = SLCD_C_STAR_MAP;
 		break;
 	case '(':
-		ch = GH08172T_C_OPEN_PAR_MAP;
+		map = SLCD_C_OPEN_PAR_MAP;
 		break;
 	case ')':
-		ch = GH08172T_C_CLOSE_PAR_MAP;
+		map = SLCD_C_CLOSE_PAR_MAP;
 		break;
-	case GH08172T_ASCII_CHAR_DEGREE_SIGN:
-		ch = GH08172T_C_DEGREE_MAP;
+	case SLCD_ASCII_CHAR_DEGREE_SIGN: /* '^' */
+		map = SLCD_C_DEGREE_MAP;
 		break;
 	case '%':
-		ch = GH08172T_C_LOW_RING_MAP;
+		map = SLCD_C_LOW_RING_MAP;
 		break;
-	case GH08172T_ASCII_CHAR_FULL:
-		ch = GH08172T_C_FULL_MAP;
+	case SLCD_ASCII_CHAR_FULL:
+		map = SLCD_C_FULL_MAP;
+		break;
+	case SLCD_ASCII_DOT:
+		map = GH08172T_POINT_SINGLE;
+		break;
+	case SLCD_ASCII_DOUBLE_DOT:
+		map = GH08172T_POINT_DOUBLE;
+		break;
+	case SLCD_ASCII_TRIPLE_DOT:
+		map = GH08172T_POINT_TRIPLE;
 		break;
 	case '0':
 	case '1':
@@ -1031,24 +1052,25 @@ static void gh08172t_convert_char_to_pattern(uint8_t the_char, uint8_t position,
 	case '7':
 	case '8':
 	case '9':
-		ch = auxdisplay_gh08172t_number_map[the_char - GH08172T_ASCII_CHAR_0];
+		map = auxdisplay_slcd_number_map[the_char - '0'];
 		break;
 	default:
 		/* The character is one upper case letter */
-		if ((the_char < GH08172T_ASCII_CHAR_LEFT_OPEN_BRACKET) &&
-		    (the_char > GH08172T_ASCII_CHAR_AT_SYMBOL)) {
-			ch = auxdisplay_gh08172t_cap_letter_map[the_char - 'A'];
+		if (the_char > '@' && the_char < '[') {
+			map = auxdisplay_slcd_cap_letter_map[the_char - 'A'];
 		}
-		break;
+		if (map < GH08172T_BAR_MAX) {
+			map = 0x0000;
+		}
 	}
 
 	/* Add bits for points for position 1..4 */
 	if (position < GH08172T_DIGIT_POSITION_5) {
 		if (point == GH08172T_POINT_SINGLE || point == GH08172T_POINT_TRIPLE) {
-			ch |= 0x0002;
+			map |= SLCD_C_SINGLE_DOT_MAP;
 		}
 		if (point == GH08172T_POINT_DOUBLE || point == GH08172T_POINT_TRIPLE) {
-			ch |= 0x0020;
+			map |= SLCD_C_DOUBLE_DOT_MAP;
 		}
 	}
 
@@ -1057,10 +1079,10 @@ static void gh08172t_convert_char_to_pattern(uint8_t the_char, uint8_t position,
 	if (position == GH08172T_DIGIT_POSITION_6 && bar_value) {
 		/* Bars 0 and 1 are mapped on the same segments as points */
 		if (bar_value & 0x01) {
-			ch |= 0x0002;
+			map |= SLCD_C_SINGLE_DOT_MAP;
 		}
 		if (bar_value & 0x02) {
-			ch |= 0x0020;
+			map |= SLCD_C_DOUBLE_DOT_MAP;
 		}
 		/* Bars 2 and 3 are mapped on never used points segments of positions 5 */
 		if (bar_value & 0x04) {
@@ -1073,7 +1095,7 @@ static void gh08172t_convert_char_to_pattern(uint8_t the_char, uint8_t position,
 
 	/* Isolate the less significant 4 bits */
 	for (int loop = 12, index = 0; index < 4; loop -= 4, index++) {
-		pattern[index] = (ch >> loop) & 0x0f;
+		pattern[index] = (map >> loop) & 0x0f;
 	}
 }
 
@@ -1447,8 +1469,8 @@ static inline int gh08172t_write_pattern_to_pos_6(const struct device *dev, cons
  * position:  the character LCD destination [1:6].
  * point:     a point or colon to display right after the character.
  *            Allowed in positions 1 to 4, ignored otherwise.
- *            Valid values: 0x0, GH08172T_ASCII_DOT, GH08172T_ASCII_DOUBLE_DOT,
- *            GH08172T_ASCII_TRIPLE_DOT
+ *            Valid values: 0x0, SLCD_ASCII_DOT, SLCD_ASCII_DOUBLE_DOT,
+ *            SLCD_ASCII_TRIPLE_DOT
  * bar_value: the value (enum lcd_bar_value) to display with bars, in position 6 only.
  */
 static int gh08172t_write_char(const struct device *dev, uint8_t ch, uint8_t position,
@@ -1497,7 +1519,7 @@ static int gh08172t_write_char(const struct device *dev, uint8_t ch, uint8_t pos
 	return ret;
 }
 
-static int auxdisplay_gh08172t_clear(const struct device *dev)
+static int auxdisplay_st_slcd_clear(const struct device *dev)
 {
 	int ret;
 
@@ -1515,18 +1537,18 @@ static int auxdisplay_gh08172t_clear(const struct device *dev)
 }
 
 /* Symbols spanning over multiple positions. */
-static inline int auxdisplay_gh08172t_write_long_symbol(const struct device *dev, uint8_t ch,
-							int *position)
+static inline int auxdisplay_st_slcd_write_long_symbol(const struct device *dev, uint8_t ch,
+						       int *position)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
 	int ret;
 
 	if (ch == '%') {
-		if (*position + GH08172T_PERCENTAGE_SYMBOL_POSITIONS >
-		    config->capabilities.columns) {
+		if (*position + SLCD_PERCENTAGE_SYMBOL_POSITIONS >
+		    config->panel_config.capabilities.columns) {
 			return EINVAL;
 		}
-		ret = gh08172t_write_char(dev, GH08172T_ASCII_CHAR_DEGREE_SIGN, *position,
+		ret = gh08172t_write_char(dev, SLCD_ASCII_CHAR_DEGREE_SIGN, *position,
 					  GH08172T_POINT_OFF, GH08172T_BAR_0);
 		if (ret) {
 			return ret;
@@ -1542,23 +1564,58 @@ static inline int auxdisplay_gh08172t_write_long_symbol(const struct device *dev
 	return 0;
 }
 
-static inline void gh08172t_prepare_dot_and_bars(const struct device *dev, uint8_t ch, int position,
-						 int *i, uint8_t *point, uint8_t *bar_value)
+static inline bool gh08172t_prepare_indicator(const struct device *dev, uint8_t ch, int position,
+					      int *i, uint8_t *point, uint8_t *bar_value)
 {
+#ifdef USE_INDICATOR_MASKS
+	const struct auxdisplay_st_slcd_config *config = dev->config;
+
+	if (config->panel_config.indicator_masks == NULL) {
+		return false;
+	}
+
+	const int indicator_pos = *i == 0 ? 0 : position + 1;
+
+	if (ch == '.' &&
+	    config->panel_config.indicator_masks[indicator_pos] & SLCD_SINGLE_DOT_MASK) {
+		*point = GH08172T_POINT_SINGLE;
+		(*i)++;
+		return true;
+	} else if (ch == ':' &&
+		   config->panel_config.indicator_masks[indicator_pos] & SLCD_DOUBLE_DOT_MASK) {
+		*point = GH08172T_POINT_DOUBLE;
+		(*i)++;
+		return true;
+	} else if (ch == ';' &&
+		   config->panel_config.indicator_masks[indicator_pos] & SLCD_TRIPLE_DOT_MASK) {
+		*point = GH08172T_POINT_TRIPLE;
+		(*i)++;
+		return true;
+	} else if (ch < GH08172T_BAR_MAX &&
+		   config->panel_config.indicator_masks[indicator_pos] & SLCD_4_BIT_BARS_MASK) {
+		*bar_value = ch;
+		(*i)++;
+		return true;
+	} else {
+		/* Try to treat it as a regular character on next iteration. */
+	}
+	return false;
+#endif /* USE_INDICATOR_MASKS */
+
 	/* points in position 1..4; position 5 is ignored in later in
 	 * gh08172t_convert_char_to_pattern().
 	 */
 	if (position < GH08172T_DIGIT_POSITION_6) {
 		switch (ch) {
-		case GH08172T_ASCII_DOT:
+		case SLCD_ASCII_DOT:
 			*point = GH08172T_POINT_SINGLE;
 			(*i)++;
 			break;
-		case GH08172T_ASCII_DOUBLE_DOT:
+		case SLCD_ASCII_DOUBLE_DOT:
 			*point = GH08172T_POINT_DOUBLE;
 			(*i)++;
 			break;
-		case GH08172T_ASCII_TRIPLE_DOT:
+		case SLCD_ASCII_TRIPLE_DOT:
 			*point = GH08172T_POINT_TRIPLE;
 			(*i)++;
 			break;
@@ -1571,6 +1628,13 @@ static inline void gh08172t_prepare_dot_and_bars(const struct device *dev, uint8
 	} else {
 		/* Try to treat it as a regular character on next iteration. */
 	}
+	return true;
+}
+
+static inline bool gh08172t_prepare_character(const struct device *dev, uint8_t ch, int position,
+					      int *i, uint8_t *point, uint8_t *bar_value)
+{
+	return false;
 }
 
 /* Each position, but pos 5, handles dots/bars together with the character itself; this minimizes
@@ -1578,22 +1642,22 @@ static inline void gh08172t_prepare_dot_and_bars(const struct device *dev, uint8
  * For this reason, symbols spanning over multiple positions are treated by a specific function, but
  * not their last position, to have the usual dot/bars handling.
  */
-static int auxdisplay_gh08172t_write(const struct device *dev, const uint8_t *data, uint16_t len)
+static int auxdisplay_st_slcd_write(const struct device *dev, const uint8_t *data, uint16_t len)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
-	struct auxdisplay_gh08172t_data *driver_data = dev->data;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
+	struct auxdisplay_st_slcd_data *driver_data = dev->data;
 	int ret;
 
 	/* Loop to update segments sequentially up to the physical maximum string length
 	 * restriction.
 	 */
 	for (int i = 0, position = driver_data->character_x;
-	     i < len && position < config->capabilities.columns; i++, position++) {
+	     i < len && position < config->panel_config.capabilities.columns; i++, position++) {
 		const uint8_t one_char = data[i];
 		uint8_t point = GH08172T_POINT_OFF;
 		uint8_t bar_value = 0;
 
-		ret = auxdisplay_gh08172t_write_long_symbol(dev, one_char, &position);
+		ret = auxdisplay_st_slcd_write_long_symbol(dev, one_char, &position);
 		if (ret) {
 			/* Since the symbol initial part couldn't be written, let's skip the last
 			 * part and its dots/bars.
@@ -1601,9 +1665,11 @@ static int auxdisplay_gh08172t_write(const struct device *dev, const uint8_t *da
 			continue;
 		}
 
-		if (i + 1 < len) {
-			gh08172t_prepare_dot_and_bars(dev, data[i + 1], position, &i, &point,
-						      &bar_value);
+		if (i + 1 < len && gh08172t_prepare_indicator(dev, data[i + 1], position, &i,
+							      &point, &bar_value)) {
+		}
+
+		if (gh08172t_prepare_character(dev, one_char, position, &i, &point, &bar_value)) {
 		}
 
 		ret = gh08172t_write_char(dev, one_char, position, point, bar_value);
@@ -1624,17 +1690,17 @@ static int auxdisplay_gh08172t_write(const struct device *dev, const uint8_t *da
 }
 
 /* Map implementation functions to the standard public Zephyr auxdisplay API interface. */
-static DEVICE_API(auxdisplay, auxdisplay_gh08172t_auxdisplay_api) = {
-	.capabilities_get = auxdisplay_gh08172t_capabilities_get,
-	.clear = auxdisplay_gh08172t_clear,
-	.write = auxdisplay_gh08172t_write,
+static DEVICE_API(auxdisplay, auxdisplay_st_slcd_auxdisplay_api) = {
+	.capabilities_get = auxdisplay_st_slcd_capabilities_get,
+	.clear = auxdisplay_st_slcd_clear,
+	.write = auxdisplay_st_slcd_write,
 };
 
 /* Core device initialization logic executed automatically by the Zephyr kernel boot sequencer. */
-static int auxdisplay_gh08172t_init(const struct device *dev)
+static int auxdisplay_st_slcd_init(const struct device *dev)
 {
-	const struct auxdisplay_gh08172t_config *config = dev->config;
-	struct auxdisplay_gh08172t_data *driver_data = dev->data;
+	const struct auxdisplay_st_slcd_config *config = dev->config;
+	struct auxdisplay_st_slcd_data *driver_data = dev->data;
 	int ret;
 	bool success;
 
@@ -1643,6 +1709,41 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 		LOG_ERR("Clock Control driver device is not ready");
 		return -ENODEV;
 	}
+
+	/* Enable the PWR module clock (Power Control) */
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
+
+	/* Unlock the backup domain protection (Bit DBP in PWR_CR1) */
+	SET_BIT(PWR->CR1, PWR_CR1_DBP);
+
+	/* If LSE not yet set (LSERDY = 0), set it and switch it on */
+	if (READ_BIT(RCC->BDCR, RCC_BDCR_LSERDY) == 0) {
+
+		/* Set the driving capability to 3 (High -> bit 11 and 10 set to '1') */
+		MODIFY_REG(RCC->BDCR, RCC_BDCR_LSEDRV, (3U << RCC_BDCR_LSEDRV_Pos));
+
+		/* Switch on the extern clock LSE (LSEON) */
+		SET_BIT(RCC->BDCR, RCC_BDCR_LSEON);
+
+		/* In POST_KERNEL wait to allow the clock to start and get ready */
+		int timeout_lse_ms = 1000;
+		while (READ_BIT(RCC->BDCR, RCC_BDCR_LSERDY) == 0 && timeout_lse_ms > 0) {
+			k_msleep(1); /* Don't block the CPU */
+			timeout_lse_ms--;
+		}
+
+		if (timeout_lse_ms == 0) {
+			LOG_ERR("LSE not ready after cold start!");
+			return -ETIMEDOUT;
+		}
+	}
+
+	/* Move the RTC/LCD to the LSE channel (RTCSEL = 0x01) */
+	if (READ_BIT(RCC->BDCR, RCC_BDCR_RTCSEL) != RCC_BDCR_RTCSEL_0) {
+		MODIFY_REG(RCC->BDCR, RCC_BDCR_RTCSEL, RCC_BDCR_RTCSEL_0);
+	}
+
+	LOG_DBG("LSE Ready!");
 
 	/* Remove the const qualifier in a maintainable way.
 	 * Any other way to cast it makes Sonarqube detect a "const drop" issue.
@@ -1658,7 +1759,7 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 	/* Enforce the required pin alternate configurations natively via the Pinctrl
 	 * manager framework.
 	 */
-	ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
+	ret = pinctrl_apply_state(config->pincfg, PINCTRL_STATE_DEFAULT);
 	if (ret) {
 		LOG_ERR("Failed to apply pinctrl default operational states (err: %d)", ret);
 		return ret;
@@ -1712,7 +1813,7 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 	GH08172T_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_FCRSR_MASK) != 0,
 			  config->lcd_timeout_us, k_msleep(1));
 	if (!success) {
-		LOG_ERR("Display init timeout");
+		LOG_ERR("Display init timeout A %u", config->lcd_timeout_us);
 		return -ETIMEDOUT;
 	}
 
@@ -1730,7 +1831,7 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 	GH08172T_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_ENS_MASK) != 0,
 			  config->lcd_timeout_us, k_msleep(1));
 	if (!success) {
-		LOG_ERR("Display init timeout");
+		LOG_ERR("Display init timeout B");
 		return -ETIMEDOUT;
 	}
 
@@ -1738,7 +1839,7 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 	GH08172T_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_RDY_MASK) != 0,
 			  config->lcd_timeout_us, k_msleep(1));
 	if (!success) {
-		LOG_ERR("Display init timeout");
+		LOG_ERR("Display init timeout C");
 		return -ETIMEDOUT;
 	}
 
@@ -1746,30 +1847,18 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 	driver_data->character_y = 0;
 
 	LOG_DBG("GH08172T driver initialized successfully with %d digits",
-		config->capabilities.columns);
+		config->panel_config.capabilities.columns);
 	return 0;
 }
 
 /* Advanced Devicetree generation macro mapping compile-time definitions directly to C parameters */
-#define AUXDISPLAY_GH08172T_DEVICE(inst)                                                           \
-	static struct auxdisplay_gh08172t_data auxdisplay_gh08172t_data_##inst;                    \
+#define AUXDISPLAY_ST_SLCD_DEVICE(inst)                                                            \
+	SLCD_PANEL_CONFIG(inst)                                                                    \
+	static struct auxdisplay_st_slcd_data auxdisplay_st_slcd_data_##inst;                      \
 	PINCTRL_DT_INST_DEFINE(inst);                                                              \
-	static const struct stm32_pclken auxdisplay_gh08172t_pclken_##inst[] = {                   \
+	static const struct stm32_pclken auxdisplay_st_slcd_pclken_##inst[] = {                    \
 		STM32_DT_INST_CLOCK_INFO_BY_IDX(inst, 0)};                                         \
-	static const struct auxdisplay_gh08172t_config auxdisplay_gh08172t_config_##inst = {       \
-		.capabilities =                                                                    \
-			{                                                                          \
-				.columns = DT_INST_PROP(inst, columns),                            \
-				.rows = DT_INST_PROP(inst, rows),                                  \
-				.mode = 0,                                                         \
-				.brightness.minimum = AUXDISPLAY_LIGHT_NOT_SUPPORTED,              \
-				.brightness.maximum = AUXDISPLAY_LIGHT_NOT_SUPPORTED,              \
-				.backlight.minimum = AUXDISPLAY_LIGHT_NOT_SUPPORTED,               \
-				.backlight.maximum = AUXDISPLAY_LIGHT_NOT_SUPPORTED,               \
-				.custom_characters = 0,                                            \
-				.custom_character_width = 0,                                       \
-				.custom_character_height = 0,                                      \
-			},                                                                         \
+	static const struct auxdisplay_st_slcd_config auxdisplay_st_slcd_config_##inst = {         \
 		.lcd.cr = (mem_addr_t)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                 \
 				       GH08172T_CR_OFFSET),                                        \
 		.lcd.fcr = (mem_addr_t)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                \
@@ -1780,17 +1869,18 @@ static int auxdisplay_gh08172t_init(const struct device *dev)
 					GH08172T_CLR_OFFSET),                                      \
 		.lcd.ram = (uint32_t *)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                \
 					GH08172T_RAM_OFFSET),                                      \
-		.pclken = auxdisplay_gh08172t_pclken_##inst,                                       \
+		.pclken = auxdisplay_st_slcd_pclken_##inst,                                        \
 		.clk_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_IDX(inst, 0)),                     \
-		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                                      \
+		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                                    \
 		.lcd_timeout_us = 1000 * DT_INST_PROP(inst, lcd_timeout_ms),                       \
+		.panel_config = slcd_panel_config_##inst,                                          \
 	};                                                                                         \
-	DEVICE_DT_INST_DEFINE(                                                                     \
-		inst, auxdisplay_gh08172t_init, NULL, &auxdisplay_gh08172t_data_##inst,            \
-		&auxdisplay_gh08172t_config_##inst, POST_KERNEL, CONFIG_AUXDISPLAY_INIT_PRIORITY,  \
-		&auxdisplay_gh08172t_auxdisplay_api)
+	DEVICE_DT_INST_DEFINE(inst, auxdisplay_st_slcd_init, NULL,                                 \
+			      &auxdisplay_st_slcd_data_##inst, &auxdisplay_st_slcd_config_##inst,  \
+			      POST_KERNEL, CONFIG_AUXDISPLAY_INIT_PRIORITY,                        \
+			      &auxdisplay_st_slcd_auxdisplay_api)
 
 /* Parse the active devicetree layout and execute the instantiation macro for matching okay
  * targets.
  */
-DT_INST_FOREACH_STATUS_OKAY(AUXDISPLAY_GH08172T_DEVICE)
+DT_INST_FOREACH_STATUS_OKAY(AUXDISPLAY_ST_SLCD_DEVICE)

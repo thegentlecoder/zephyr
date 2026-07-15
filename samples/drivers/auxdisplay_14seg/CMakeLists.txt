@@ -2,6 +2,9 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
+set(BOARD stm32l476g_disco)
+set(SHIELD st_gh08172t)
+
 find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
 project(auxdisplay_14seg)
 
