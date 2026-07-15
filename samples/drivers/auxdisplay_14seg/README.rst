@@ -53,7 +53,5 @@ ADD samples/drivers/auxdisplay_14seg/tests.yaml
 Open points
 ***********
 
-- clarify how to split this driver in a common 14seg LCD interface and a specific GH08172T driver
-- implement auxdisplay_display_on and off
-- implement auxdisplay_display_position_set and get
+- use HAL
 - snow demo with segments

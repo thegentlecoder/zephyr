@@ -1,0 +1,62 @@
+#
+# Copyright (c) 2026 Renato Mauro
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+description:
+  STMicroelectronics MCU Segment LCD (SLCD) controller used as segment-style
+  auxiliary display.
+
+compatible: "st,slcd"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  reg:
+    required: true
+    description: Base address and length of the LCD peripheral register block.
+
+  pin-list:
+    type: array
+    description: |
+      The list of MCU AF11 channel names associated to the corresponding LCD segment pin.
+
+  com-list:
+    type: array
+    description: |
+      Used just to have the count of the COM registers, not used to directly evaluate the COM
+      register index.
+
+  character-bit-list:
+    type: array
+    description: |
+      The list of bits of the controller registers that are used to control the segments.
+
+  character-com-list:
+    type: array
+    description: |
+      The list of com registers of the controller that are used to control the segments.
+
+  indicator-bit-list:
+    type: array
+    description: |
+      The list of bits of the controller registers that are used to control the indicators.
+
+  indicator-com-list:
+    type: array
+    description: |
+      The list of com registers of the controller that are used to control the indicators.
+
+  lcd-timeout-ms:
+    type: int
+    default: 100
+    description: |
+      Timeout in ms to wait after issuing LCD operations such as Update Request
+      or waiting for Readyness.
+
+  custom-character-slot-count:
+    type: int
+    default: 32
+    description: |
+      Number of custom characters the application can store into the driver and then use.

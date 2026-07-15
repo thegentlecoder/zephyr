@@ -80,6 +80,11 @@ properties:
       Example: if indicator 0 controlled by pin 15, COM4, the first element of
       this array is 4.
 
+  display-indicators:
+    type: array
+    description: |
+      List of indicators for all indicator types for all positions, 0xff if not existing.
+
   col-indicators:
     type: array
     description: |
