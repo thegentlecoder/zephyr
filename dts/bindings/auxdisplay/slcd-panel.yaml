@@ -64,6 +64,19 @@ properties:
       Indicators are individual segments that are not part of standard character positions.
       For example, a colon, decimal point, or status indicator would count as one indicator.
 
+  indicator-masks:
+    type: array
+    description: |
+      List of indicator masks at the left side of the first digit and at the
+      right side of each digit. The array size must be digit count plus one.
+      Type of indicators:
+      - 0x00: none
+      - 0x01: lower dot  ('.', e.g. decimal dot)
+      - 0x02: double dot (':', e.g. hour-minute separator)
+      - 0x04: triple dot (';', made activating both decimal and double dots)
+      - 0x08: 4 bit bars ('\00' to '\0F', LSB is the bottom one)
+      - 0x10: upper dot  ('.', e.g. decimal dot in rotated mode)
+
   indicator-pins:
     type: array
     description: |

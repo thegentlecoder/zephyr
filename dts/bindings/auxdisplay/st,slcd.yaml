@@ -1,0 +1,41 @@
+#
+# Copyright (c) 2026 Renato Mauro
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+description:
+  STMicroelectronics MCU Segment LCD (SLCD) controller used as segment-style
+  auxiliary display.
+
+compatible: "st,slcd"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  reg:
+    required: true
+    description: Base address and length of the LCD peripheral register block.
+
+  pin-list:
+    type: array
+    description: |
+      The list of front plane PINs of the controller that are used to control the
+      segments/indicators. Set the value according to actual hardware pin-mux. For
+      example, <12 13 14 15 8 9 10 11> means the panel has 8 front plane pins in
+      total, and the controller uses pin 12~15 to control the panel's pin 0~3, and
+      uses pin 8~11 to control the panel's pin 4~7.
+
+  com-list:
+    type: array
+    description: |
+      The list of back plane PINs of the controller that are used to control the
+      segments/indicators. Set the value according to actual hardware pin-mux, similar
+      to pin-list.
+
+  lcd-timeout-ms:
+    type: int
+    default: 100
+    description: |
+      Timeout in ms to wait after issuing LCD operations such as Update Request
+      or waiting for Readyness.
