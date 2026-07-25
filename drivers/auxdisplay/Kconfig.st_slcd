@@ -2,11 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config AUXDISPLAY_ST_SLCD
-	bool "ST MCU SLCD display driver"
+	bool "ST SLCD display driver"
 	default y
 	depends on DT_HAS_ST_SLCD_ENABLED
+	select RTC
+	select GPIO
+	select CLOCK_CONTROL
+	select USE_STM32_HAL_LCD
 	help
-	  Enable STMicroelectronics MCU SLCD (Segmented LCD) auxdisplay driver.
-	  Provides the standard auxdisplay API for ST MCU SLCD hardware,
+	  Enable STMicroelectronics SLCD (Segmented LCD) auxdisplay driver.
+	  Provides the standard auxdisplay API for ST SLCD hardware,
 	  handling both hardware initialization and the display panel layer
 	  in a single unified driver.

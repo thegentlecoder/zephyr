@@ -17,6 +17,57 @@ properties:
     required: true
     description: Base address and length of the LCD peripheral register block.
 
+  lcd-duty:
+    required: true
+    type: int
+    description: LCD_DUTY_1_4.
+
+  lcd-bias:
+    required: true
+    type: int
+    description: LCD_BIAS_1_3.
+
+  lcd-mux-segment:
+    required: true
+    type: int
+    description: LCD_MUXSEGMENT_DISABLE.
+
+  lcd-voltage-source:
+    type: int
+    description: LCD_VOLTAGESOURCE_INTERNAL.
+
+  lcd-prescaler:
+    type: int
+    description: LCD_PRESCALER_1.
+
+  lcd-divider:
+    type: int
+    description: LCD_DIVIDER_31.
+
+  lcd-contrast:
+    type: int
+    description: LCD_CONTRASTLEVEL_5.
+
+  lcd-pulse-on-duration:
+    type: int
+    description: LCD_PULSEONDURATION_4.
+
+  lcd-dead-time:
+    type: int
+    description: LCD_DEADTIME_0.
+
+  lcd-high-drive:
+    type: int
+    description: LCD_HIGHDRIVE_DISABLE.
+
+  lcd-blink-mode:
+    type: int
+    description: LCD_BLINKMODE_OFF.
+
+  lcd-blink-frequency:
+    type: int
+    description: LCD_BLINKFREQUENCY_DIV32.
+
   pin-list:
     type: array
     description: |
@@ -47,13 +98,6 @@ properties:
     type: array
     description: |
       The list of com registers of the controller that are used to control the indicators.
-
-  lcd-timeout-ms:
-    type: int
-    default: 100
-    description: |
-      Timeout in ms to wait after issuing LCD operations such as Update Request
-      or waiting for Readyness.
 
   custom-character-slot-count:
     type: int

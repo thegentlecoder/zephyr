@@ -10,7 +10,6 @@ auxdisplay_0: &slcd {
 		columns = <6>;
 		rows = <1>;
 		segment-type = <14>; /* 14 segment SLCD panel */
-
 		/* Which pin controls which segment. 6 positions x 14 segments = 84 elements.
 		 * Segment order per position: A B C D E F G H J K M N O P
 		 * Since the display starts from left to right

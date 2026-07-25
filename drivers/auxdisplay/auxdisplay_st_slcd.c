@@ -28,7 +28,9 @@ LOG_MODULE_REGISTER(auxdisplay_st_slcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
 /* ST modules to refer for definitions:
  * - /deps/modules/hal/stm32/stm32cube/stm32l4xx/soc/stm32l4xx.h
  * - /deps/modules/hal/stm32/stm32cube/stm32l4xx/soc/stm32l476xx.h
+ * - /deps/modules/hal/stm32/stm32cube/stm32l4xx/drivers/include/stm32l4xx_ll_bus.h
  * - /deps/modules/hal/stm32/stm32cube/stm32l4xx/drivers/include/stm32l4xx_hal_lcd.h
+ * - /deps/modules/hal/stm32/stm32cube/stm32l4xx/drivers/src/stm32l4xx_hal_lcd.c
  */
 
 /* Supported characters
@@ -311,207 +313,13 @@ LOG_MODULE_REGISTER(auxdisplay_st_slcd, CONFIG_AUXDISPLAY_LOG_LEVEL);
 
  */
 
-#define GH08172T_RAM_REGISTER0  (0x00000000U) /* LCD RAM Register 0  */
-#define GH08172T_RAM_REGISTER1  (0x00000001U) /* LCD RAM Register 1  */
-#define GH08172T_RAM_REGISTER2  (0x00000002U) /* LCD RAM Register 2  */
-#define GH08172T_RAM_REGISTER3  (0x00000003U) /* LCD RAM Register 3  */
-#define GH08172T_RAM_REGISTER4  (0x00000004U) /* LCD RAM Register 4  */
-#define GH08172T_RAM_REGISTER5  (0x00000005U) /* LCD RAM Register 5  */
-#define GH08172T_RAM_REGISTER6  (0x00000006U) /* LCD RAM Register 6  */
-#define GH08172T_RAM_REGISTER7  (0x00000007U) /* LCD RAM Register 7  */
-#define GH08172T_RAM_REGISTER8  (0x00000008U) /* LCD RAM Register 8  */
-#define GH08172T_RAM_REGISTER9  (0x00000009U) /* LCD RAM Register 9  */
-#define GH08172T_RAM_REGISTER10 (0x0000000AU) /* LCD RAM Register 10 */
-#define GH08172T_RAM_REGISTER11 (0x0000000BU) /* LCD RAM Register 11 */
-#define GH08172T_RAM_REGISTER12 (0x0000000CU) /* LCD RAM Register 12 */
-#define GH08172T_RAM_REGISTER13 (0x0000000DU) /* LCD RAM Register 13 */
-#define GH08172T_RAM_REGISTER14 (0x0000000EU) /* LCD RAM Register 14 */
-#define GH08172T_RAM_REGISTER15 (0x0000000FU) /* LCD RAM Register 15 */
-
-#define GH08172T_CR_OFFSET     0x00 /* LCD control register          */
-#define GH08172T_FCR_OFFSET    0x04 /* LCD frame control register    */
-#define GH08172T_SR_OFFSET     0x08 /* LCD status register           */
-#define GH08172T_CLR_OFFSET    0x0C /* LCD clear register            */
-#define GH08172T_RAM_OFFSET    0x14 /* LCD display memory, 0x14-0x50 */
-#define GH08172T_RAM_REG_COUNT (GH08172T_RAM_REGISTER15 + 1)
-
-#define GH08172T_CR_LCDEN_POS    (0U)
-#define GH08172T_CR_LCDEN_MASK   (0x1UL << GH08172T_CR_LCDEN_POS)
-#define GH08172T_CR_VSEL_POS     (1U)
-#define GH08172T_CR_VSEL_MASK    (0x1UL << GH08172T_CR_VSEL_POS)
-#define GH08172T_CR_DUTY_0_POS   (2U)
-#define GH08172T_CR_DUTY_MASK    (0x7UL << GH08172T_CR_DUTY_0_POS)
-#define GH08172T_CR_DUTY_0_MASK  (0x1UL << GH08172T_CR_DUTY_0_POS)
-#define GH08172T_CR_DUTY_1_MASK  (0x2UL << GH08172T_CR_DUTY_0_POS)
-#define GH08172T_CR_DUTY_2_MASK  (0x4UL << GH08172T_CR_DUTY_0_POS)
-#define GH08172T_CR_BIAS_1_POS   (5U)
-#define GH08172T_CR_BIAS_MASK    (0x3UL << GH08172T_CR_BIAS_1_POS)
-#define GH08172T_CR_BIAS_0_MASK  (0x1UL << GH08172T_CR_BIAS_1_POS)
-#define GH08172T_CR_BIAS_1_MASK  (0x2UL << GH08172T_CR_BIAS_1_POS)
-#define GH08172T_CR_MUX_SEG_POS  (7U)
-#define GH08172T_CR_MUX_SEG_MASK (0x1UL << GH08172T_CR_MUX_SEG_POS)
-#define GH08172T_CR_BUFEN_POS    (8U)
-
-#define GH08172T_FCR_HIGH_DRIVE_POS    (0U)
-#define GH08172T_FCR_HIGH_DRIVE_MASK   (0x1UL << GH08172T_FCR_HIGH_DRIVE_POS)
-#define GH08172T_FCR_SOFIE_POS         (1U)
-#define GH08172T_FCR_UDDIE_POS         (3U)
-#define GH08172T_FCR_PON_POS           (4U)
-#define GH08172T_FCR_PON_MASK          (0x7UL << GH08172T_FCR_PON_POS)
-#define GH08172T_FCR_PON_0_MASK        (0x1UL << GH08172T_FCR_PON_POS)
-#define GH08172T_FCR_PON_1_MASK        (0x2UL << GH08172T_FCR_PON_POS)
-#define GH08172T_FCR_PON_2_MASK        (0x4UL << GH08172T_FCR_PON_POS)
-#define GH08172T_FCR_DEAD_POS          (7U)
-#define GH08172T_FCR_DEAD_MASK         (0x7UL << GH08172T_FCR_DEAD_POS)
-#define GH08172T_FCR_DEAD_0_MASK       (0x1UL << GH08172T_FCR_DEAD_POS)
-#define GH08172T_FCR_DEAD_1_MASK       (0x2UL << GH08172T_FCR_DEAD_POS)
-#define GH08172T_FCR_DEAD_2_MASK       (0x4UL << GH08172T_FCR_DEAD_POS)
-#define GH08172T_FCR_CC_POS            (10U)
-#define GH08172T_FCR_CC_MASK           (0x7UL << GH08172T_FCR_CC_POS)
-#define GH08172T_FCR_CC_0_MASK         (0x1UL << GH08172T_FCR_CC_POS)
-#define GH08172T_FCR_CC_1_MASK         (0x2UL << GH08172T_FCR_CC_POS)
-#define GH08172T_FCR_CC_2_MASK         (0x4UL << GH08172T_FCR_CC_POS)
-#define GH08172T_FCR_BLINK_FREQ_POS    (13U)
-#define GH08172T_FCR_BLINK_FREQ_MASK   (0x7UL << GH08172T_FCR_BLINK_FREQ_POS)
-#define GH08172T_FCR_BLINK_FREQ_0_MASK (0x1UL << GH08172T_FCR_BLINK_FREQ_POS)
-#define GH08172T_FCR_BLINK_FREQ_1_MASK (0x2UL << GH08172T_FCR_BLINK_FREQ_POS)
-#define GH08172T_FCR_BLINK_FREQ_2_MASK (0x4UL << GH08172T_FCR_BLINK_FREQ_POS)
-#define GH08172T_FCR_BLINK_POS         (16U)
-#define GH08172T_FCR_BLINK_MASK        (0x3UL << GH08172T_FCR_BLINK_POS)
-#define GH08172T_FCR_DIV_POS           (18U)
-#define GH08172T_FCR_DIV_MASK          (0xFUL << GH08172T_FCR_DIV_POS)
-#define GH08172T_FCR_PS_POS            (22U)
-#define GH08172T_FCR_PS_MASK           (0xFUL << GH08172T_FCR_PS_POS)
-
-#define GH08172T_SR_ENS_POS    (0U)
-#define GH08172T_SR_ENS_MASK   (0x1UL << GH08172T_SR_ENS_POS)
-#define GH08172T_SR_SOF_POS    (1U)
-#define GH08172T_SR_UDR_POS    (2U)
-#define GH08172T_SR_UDR_MASK   (0x1UL << GH08172T_SR_UDR_POS)
-#define GH08172T_SR_UDD_POS    (3U)
-#define GH08172T_SR_UDD_MASK   (0x1UL << GH08172T_SR_UDD_POS)
-#define GH08172T_SR_RDY_POS    (4U)
-#define GH08172T_SR_RDY_MASK   (0x1UL << GH08172T_SR_RDY_POS)
-#define GH08172T_SR_FCRSR_POS  (5U)
-#define GH08172T_SR_FCRSR_MASK (0x1UL << GH08172T_SR_FCRSR_POS)
-
-#define GH08172T_CLR_SOFC_POS  (1U)
-#define GH08172T_CLR_SOFC_MASK (0x1UL << GH08172T_CLR_SOFC_POS)
-#define GH08172T_CLR_UDDC_POS  (3U)
-#define GH08172T_CLR_UDDC_MASK (0x1UL << GH08172T_CLR_UDDC_POS)
-
-#define GH08172T_PRESCALER_1     (0x00000000U) /* CLKPS = LCDCLK        */
-#define GH08172T_PRESCALER_2     (0x00400000U) /* CLKPS = LCDCLK/2      */
-#define GH08172T_PRESCALER_4     (0x00800000U) /* CLKPS = LCDCLK/4      */
-#define GH08172T_PRESCALER_8     (0x00C00000U) /* CLKPS = LCDCLK/8      */
-#define GH08172T_PRESCALER_16    (0x01000000U) /* CLKPS = LCDCLK/16     */
-#define GH08172T_PRESCALER_32    (0x01400000U) /* CLKPS = LCDCLK/32     */
-#define GH08172T_PRESCALER_64    (0x01800000U) /* CLKPS = LCDCLK/64     */
-#define GH08172T_PRESCALER_128   (0x01C00000U) /* CLKPS = LCDCLK/128    */
-#define GH08172T_PRESCALER_256   (0x02000000U) /* CLKPS = LCDCLK/256    */
-#define GH08172T_PRESCALER_512   (0x02400000U) /* CLKPS = LCDCLK/512    */
-#define GH08172T_PRESCALER_1024  (0x02800000U) /* CLKPS = LCDCLK/1024   */
-#define GH08172T_PRESCALER_2048  (0x02C00000U) /* CLKPS = LCDCLK/2048   */
-#define GH08172T_PRESCALER_4096  (0x03000000U) /* CLKPS = LCDCLK/4096   */
-#define GH08172T_PRESCALER_8192  (0x03400000U) /* CLKPS = LCDCLK/8192   */
-#define GH08172T_PRESCALER_16384 (0x03800000U) /* CLKPS = LCDCLK/16384  */
-#define GH08172T_PRESCALER_32768 (0x03C00000U) /* CLKPS = LCDCLK/32768  */
-
-#define GH08172T_DIVIDER_16 (0x00000000U) /* LCD frequency = CLKPS/16 */
-#define GH08172T_DIVIDER_17 (0x00040000U) /* LCD frequency = CLKPS/17 */
-#define GH08172T_DIVIDER_18 (0x00080000U) /* LCD frequency = CLKPS/18 */
-#define GH08172T_DIVIDER_19 (0x000C0000U) /* LCD frequency = CLKPS/19 */
-#define GH08172T_DIVIDER_20 (0x00100000U) /* LCD frequency = CLKPS/20 */
-#define GH08172T_DIVIDER_21 (0x00140000U) /* LCD frequency = CLKPS/21 */
-#define GH08172T_DIVIDER_22 (0x00180000U) /* LCD frequency = CLKPS/22 */
-#define GH08172T_DIVIDER_23 (0x001C0000U) /* LCD frequency = CLKPS/23 */
-#define GH08172T_DIVIDER_24 (0x00200000U) /* LCD frequency = CLKPS/24 */
-#define GH08172T_DIVIDER_25 (0x00240000U) /* LCD frequency = CLKPS/25 */
-#define GH08172T_DIVIDER_26 (0x00280000U) /* LCD frequency = CLKPS/26 */
-#define GH08172T_DIVIDER_27 (0x002C0000U) /* LCD frequency = CLKPS/27 */
-#define GH08172T_DIVIDER_28 (0x00300000U) /* LCD frequency = CLKPS/28 */
-#define GH08172T_DIVIDER_29 (0x00340000U) /* LCD frequency = CLKPS/29 */
-#define GH08172T_DIVIDER_30 (0x00380000U) /* LCD frequency = CLKPS/30 */
-#define GH08172T_DIVIDER_31 (0x003C0000U) /* LCD frequency = CLKPS/31 */
-
-#define GH08172T_DUTY_STATIC (0x00000000U)                                         /* Static duty */
-#define GH08172T_DUTY_1_2    (GH08172T_CR_DUTY_0_MASK)                             /* 1/2 duty    */
-#define GH08172T_DUTY_1_3    (GH08172T_CR_DUTY_1_MASK)                             /* 1/3 duty    */
-#define GH08172T_DUTY_1_4    ((GH08172T_CR_DUTY_1_MASK | GH08172T_CR_DUTY_0_MASK)) /* 1/4 duty    */
-#define GH08172T_DUTY_1_8    (GH08172T_CR_DUTY_2_MASK)                             /* 1/8 duty    */
-
-#define GH08172T_BIAS_1_4 (0x00000000U)           /* 1/4 Bias */
-#define GH08172T_BIAS_1_2 GH08172T_CR_BIAS_0_MASK /* 1/2 Bias */
-#define GH08172T_BIAS_1_3 GH08172T_CR_BIAS_1_MASK /* 1/3 Bias */
-
-#define GH08172T_CR_VSEL_INTERNAL (0x00000000U)
-#define GH08172T_CR_VSEL_EXTERNAL GH08172T_CR_VSEL
-
-#define GH08172T_PULSEONDURATION_0 (0x00000000U)
-#define GH08172T_PULSEONDURATION_1 (GH08172T_FCR_PON_0_MASK)
-#define GH08172T_PULSEONDURATION_2 (GH08172T_FCR_PON_1_MASK)
-#define GH08172T_PULSEONDURATION_3 (GH08172T_FCR_PON_1_MASK | GH08172T_FCR_PON_0_MASK)
-#define GH08172T_PULSEONDURATION_4 (GH08172T_FCR_PON_2_MASK)
-#define GH08172T_PULSEONDURATION_5 (GH08172T_FCR_PON_2_MASK | GH08172T_FCR_PON_0_MASK)
-#define GH08172T_PULSEONDURATION_6 (GH08172T_FCR_PON_2_MASK | GH08172T_FCR_PON_1_MASK)
-#define GH08172T_PULSEONDURATION_7 (GH08172T_FCR_PON_MASK)
-
-#define GH08172T_DEADTIME_0 (0x00000000U)                                         /* No phases */
-#define GH08172T_DEADTIME_1 (GH08172T_FCR_DEAD_0_MASK)                            /* 1 Phase */
-#define GH08172T_DEADTIME_2 (GH08172T_FCR_DEAD_1_MASK)                            /* 2 Phase */
-#define GH08172T_DEADTIME_3 (GH08172T_FCR_DEAD_1_MASK | GH08172T_FCR_DEAD_0_MASK) /* 3 Phase */
-#define GH08172T_DEADTIME_4 (GH08172T_FCR_DEAD_2_MASK)                            /* 4 Phase */
-#define GH08172T_DEADTIME_5 (GH08172T_FCR_DEAD_2_MASK | GH08172T_FCR_DEAD_0_MASK) /* 5 Phase */
-#define GH08172T_DEADTIME_6 (GH08172T_FCR_DEAD_2_MASK | GH08172T_FCR_DEAD_1_MASK) /* 6 Phase */
-#define GH08172T_DEADTIME_7 (GH08172T_FCR_DEAD_MASK)                              /* 7 Phase */
-
-#define GH08172T_BLINK_OFF           (0x00000000U)
-#define GH08172T_BLINK_SEG0_COM0     (GH08172T_FCR_BLINK_0) /* 1 pixel */
-#define GH08172T_BLINK_SEG0_ALLCOM   (GH08172T_FCR_BLINK_1) /* up to 8 pixels as per duty) */
-#define GH08172T_BLINK_ALLSEG_ALLCOM (GH08172T_FCR_BLINK)   /* all pixels */
-
-#define GH08172T_BLINK_FREQ_DIV8  (0x00000000U)                    /* fLCD/8    */
-#define GH08172T_BLINK_FREQ_DIV16 (GH08172T_FCR_BLINK_FREQ_0_MASK) /* fLCD/16   */
-#define GH08172T_BLINK_FREQ_DIV32 (GH08172T_FCR_BLINK_FREQ_1_MASK) /* fLCD/32   */
-#define GH08172T_BLINKFREQUENCY_DIV64                                                              \
-	(GH08172T_FCR_BLINK_FREQ_1_MASK | GH08172T_FCR_BLINK_FREQ_0_MASK) /* fLCD/64   */
-#define GH08172T_BLINKFREQUENCY_DIV128 (GH08172T_FCR_BLINK_FREQ_2_MASK)   /* fLCD/128  */
-#define GH08172T_BLINKFREQUENCY_DIV256                                                             \
-	(GH08172T_FCR_BLINK_FREQ_2_MASK | GH08172T_FCR_BLINK_FREQ_0_MASK) /* fLCD/256  */
-#define GH08172T_BLINK_FREQ_DIV512                                                                 \
-	(GH08172T_FCR_BLINK_FREQ_2_MASK | GH08172T_FCR_BLINK_FREQ_1_MASK) /* fLCD/512  */
-#define GH08172T_BLINK_FREQ_DIV1024 (GH08172T_FCR_BLINK_FREQ_MASK)        /* fLCD/1024 */
-
-#define GH08172T_CONTRASTLEVEL_0 (0x00000000U)                                     /* 2.60V */
-#define GH08172T_CONTRASTLEVEL_1 (GH08172T_FCR_CC_0_MASK)                          /* 2.73V */
-#define GH08172T_CONTRASTLEVEL_2 (GH08172T_FCR_CC_1_MASK)                          /* 2.86V */
-#define GH08172T_CONTRASTLEVEL_3 (GH08172T_FCR_CC_1_MASK | GH08172T_FCR_CC_0_MASK) /* 2.99V */
-#define GH08172T_CONTRASTLEVEL_4 (GH08172T_FCR_CC_2_MASK)                          /* 3.12V */
-#define GH08172T_CONTRASTLEVEL_5 (GH08172T_FCR_CC_2_MASK | GH08172T_FCR_CC_0_MASK) /* 3.26V */
-#define GH08172T_CONTRASTLEVEL_6 (GH08172T_FCR_CC_2_MASK | GH08172T_FCR_CC_1_MASK) /* 3.40V */
-#define GH08172T_CONTRASTLEVEL_7 (GH08172T_FCR_CC_MASK)                            /* 3.55V */
-
-#define GH08172T_FCR_HIGH_DRIVE_DISABLE ((uint32_t)0x00000000)
-#define GH08172T_FCR_HIGH_DRIVE_ENABLE  (GH08172T_FCR_HIGH_DRIVE_MASK)
-
-#define GH08172T_CR_MUX_SEG_DISABLE (0x00000000U)
-#define GH08172T_CR_MUX_SEG_ENABLE  (GH08172T_CR_MUX_SEG_MASK) /* SEG[31:28] muxed SEG[43:40] */
-
 /* Define for scrolling sentences*/
 #define GH08172T_SCROLL_SPEED_HIGH   150
 #define GH08172T_SCROLL_SPEED_MEDIUM 300
 #define GH08172T_SCROLL_SPEED_LOW    450
-struct gh08172t_register_address {
-	mem_addr_t cr;
-	mem_addr_t fcr;
-	mem_addr_t sr;
-	mem_addr_t clr;
-	uint32_t *ram;
-};
 
 /* Immutabile driver configuration structure stored in Flash */
 struct auxdisplay_st_slcd_config {
-	const struct gh08172t_register_address lcd;
 	const struct stm32_pclken *pclken;
 	const struct device *clk_dev;
 	const struct pinctrl_dev_config *pincfg;
@@ -526,7 +334,6 @@ struct auxdisplay_st_slcd_config {
 	const uint8_t *character_com_list;
 	const uint32_t *indicator_bit_list;
 	const uint8_t *indicator_com_list;
-	const uint32_t lcd_timeout_us;
 
 	const struct auxdisplay_panel_config *panel_config;
 	const int position_count;
@@ -534,6 +341,8 @@ struct auxdisplay_st_slcd_config {
 
 /* Mutable driver runtime instance data structure stored in RAM */
 struct auxdisplay_st_slcd_data {
+	LCD_HandleTypeDef hlcd;
+
 	uint16_t cursor_x;
 	uint16_t cursor_y;
 
@@ -542,57 +351,23 @@ struct auxdisplay_st_slcd_data {
 
 	uint32_t *ram_bits_buffers;
 	uint32_t *ram_mask_buffers;
-
-	/* just initialized, never changed after init() */
-	uint32_t *character_bit_list;
-	uint8_t *character_com_list;
-	uint32_t *indicator_bit_list;
-	uint8_t *indicator_com_list;
 };
-
-struct gh08172t_init_data {
-	/* register FCR */
-	uint32_t prescaler;
-	uint32_t divider;
-	uint32_t blink_mode;
-	uint32_t blink_frequency;
-	uint32_t dead_time;
-	uint32_t pulse_on_duration;
-	uint32_t contrast;
-	uint32_t high_drive;
-	/* register CR */
-	uint32_t duty;
-	uint32_t bias;
-	uint32_t voltage_source;
-	uint32_t mux_segment;
-};
-
-#define ST_SLCD_RAM_ADDRESS(i) (mem_addr_t)(&config->lcd.ram[i])
-
-#define ST_SLCD_WAIT_FOR(bool_res, cond_expr, timeout_us, delay_stmt)                              \
-	{                                                                                          \
-		uint32_t _sswf_cycle_count = k_us_to_cyc_ceil32(timeout_us);                       \
-		uint32_t _sswf_start = k_cycle_get_32();                                           \
-		while (!(bool_res = (cond_expr)) &&                                                \
-		       (_sswf_cycle_count > (k_cycle_get_32() - _sswf_start))) {                   \
-			delay_stmt;                                                                \
-			Z_SPIN_DELAY(10);                                                          \
-		}                                                                                  \
-	}
 
 static int auxdisplay_st_slcd_display_on(const struct device *dev)
 {
-	const struct auxdisplay_st_slcd_config *config = dev->config;
+	struct auxdisplay_st_slcd_data *data = dev->data;
 
-	sys_set_bits(config->lcd.cr, GH08172T_CR_LCDEN_MASK);
+	__HAL_LCD_ENABLE(&data->hlcd);
+
 	return 0;
 }
 
 static int auxdisplay_st_slcd_display_off(const struct device *dev)
 {
-	const struct auxdisplay_st_slcd_config *config = dev->config;
+	struct auxdisplay_st_slcd_data *data = dev->data;
 
-	sys_clear_bits(config->lcd.cr, GH08172T_CR_LCDEN_MASK);
+	__HAL_LCD_DISABLE(&data->hlcd);
+
 	return 0;
 }
 
@@ -654,73 +429,47 @@ static inline void st_slcd_clear_ram_buffers(const struct device *dev)
 	memset(data->ram_mask_buffers, 0, config->ram_buffer_size);
 }
 
-static int st_slcd_clear(const struct device *dev)
+static int st_slcd_clear_and_update(const struct device *dev)
 {
-	const struct auxdisplay_st_slcd_config *config = dev->config;
-	bool success;
+	struct auxdisplay_st_slcd_data *data = dev->data;
+	HAL_StatusTypeDef hal_ret;
 
-	st_slcd_clear_ram_buffers(dev);
-
-	/* Wait Until the LCD is ready */
-	ST_SLCD_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_UDR_MASK) == 0,
-			 config->lcd_timeout_us, k_msleep(1));
-	if (!success) {
-		LOG_ERR("Display clear timeout");
-		return -ETIMEDOUT;
+	/* HAL_LCD_Clear DOES call UpdateRequest internally */
+	hal_ret = HAL_LCD_Clear(&data->hlcd);
+	if (hal_ret != HAL_OK) {
+		LOG_ERR("HAL_LCD_Clear failed (hal ret: %d)", hal_ret);
+		return -EIO;
 	}
 
-	/* Clear the LCD RAM registers */
-	for (int i = 0; i < GH08172T_RAM_REG_COUNT; i++) {
-		sys_write32(0, ST_SLCD_RAM_ADDRESS(i));
-	}
 	return 0;
 }
 
 static int st_slcd_write_ram(const struct device *dev, uint32_t ram_register, uint32_t mask,
-			     uint32_t data)
+			     uint32_t bits)
 {
-	const struct auxdisplay_st_slcd_config *config = dev->config;
-	bool success;
-	uint32_t current_val;
-	uint32_t new_val;
+	struct auxdisplay_st_slcd_data *dev_data = dev->data;
+	HAL_StatusTypeDef hal_ret;
 
-	if (!(ram_register < 8)) {
-		LOG_ERR("Unsopported RAM register (%d)", ram_register);
-		return EINVAL;
+	hal_ret = HAL_LCD_Write(&dev_data->hlcd, ram_register, mask, bits);
+	if (hal_ret != HAL_OK) {
+		LOG_ERR("HAL_LCD_Write failed (hal ret: %d)", hal_ret);
+		return -EIO;
 	}
 
-	/* Wait Until the LCD is ready */
-	ST_SLCD_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_UDR_MASK) == 0,
-			 config->lcd_timeout_us, k_msleep(1));
-	if (!success) {
-		LOG_ERR("Display write timeout");
-		return -ETIMEDOUT;
-	}
-
-	current_val = sys_read32(ST_SLCD_RAM_ADDRESS(ram_register));
-	new_val = (current_val & mask) | data;
-	sys_write32(new_val, ST_SLCD_RAM_ADDRESS(ram_register));
 	return 0;
 }
 
 static int st_slcd_update_request(const struct device *dev)
 {
-	const struct auxdisplay_st_slcd_config *config = dev->config;
-	bool success;
+	struct auxdisplay_st_slcd_data *data = dev->data;
+	HAL_StatusTypeDef hal_ret;
 
-	/* Clear the Update Display Done flag before starting the update display request */
-	sys_write32(GH08172T_CLR_UDDC_MASK, config->lcd.clr);
-
-	/* Enable the display request */
-	sys_set_bits(config->lcd.sr, GH08172T_SR_UDR_MASK);
-
-	/* Wait Until the LCD display is done */
-	ST_SLCD_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_UDD_MASK) != 0,
-			 config->lcd_timeout_us, k_msleep(1));
-	if (!success) {
-		LOG_ERR("Display update request timeout");
-		return -ETIMEDOUT;
+	hal_ret = HAL_LCD_UpdateDisplayRequest(&data->hlcd);
+	if (hal_ret != HAL_OK) {
+		LOG_ERR("HAL_LCD_UpdateDisplayRequest failed (hal ret: %d)", hal_ret);
+		return -EIO;
 	}
+
 	return 0;
 }
 
@@ -732,12 +481,7 @@ static int auxdisplay_st_slcd_clear(const struct device *dev)
 	data->cursor_x = 0;
 	data->cursor_y = 0;
 
-	ret = st_slcd_clear(dev);
-	if (ret) {
-		return ret;
-	}
-
-	ret = st_slcd_update_request(dev);
+	ret = st_slcd_clear_and_update(dev);
 	if (ret) {
 		return ret;
 	}
@@ -992,8 +736,9 @@ static DEVICE_API(auxdisplay, auxdisplay_st_slcd_auxdisplay_api) = {
 static int auxdisplay_st_slcd_init(const struct device *dev)
 {
 	const struct auxdisplay_st_slcd_config *config = dev->config;
+	struct auxdisplay_st_slcd_data *data = dev->data;
 	int ret;
-	bool success;
+	HAL_StatusTypeDef hal_ret;
 	uint8_t segment;
 	uint32_t bit;
 	uint8_t com;
@@ -1002,6 +747,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 	for (uint32_t i = 0; i < config->pin_list_len; i++) {
 		if (config->pin_list[i] >= 64) {
 			LOG_ERR("Invalid pin-list entry: %u", config->pin_list[i]);
+			k_msleep(10);
 			return -EINVAL;
 		}
 	}
@@ -1012,6 +758,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 		if (segment >= config->pin_list_len) {
 			LOG_ERR("Invalid panel segment_pins entry: %u",
 				config->panel_config->segment_pins[i]);
+			k_msleep(10);
 			return -EINVAL;
 		}
 		segment = config->pin_list[segment];
@@ -1024,6 +771,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 				"%d - %u - %u",
 				i, segment, bit, config->character_bit_list[i]);
 			k_msleep(10);
+			return -EINVAL;
 		}
 
 		if (com != config->character_com_list[i]) {
@@ -1031,6 +779,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 				"%d - %u - %u",
 				i, segment, com, config->character_com_list[i]);
 			k_msleep(10);
+			return -EINVAL;
 		}
 	}
 
@@ -1040,6 +789,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 		if (segment >= config->pin_list_len) {
 			LOG_ERR("Invalid panel indicator_pins entry: %u",
 				config->panel_config->indicator_pins[i]);
+			k_msleep(10);
 			return -EINVAL;
 		}
 		segment = config->pin_list[segment];
@@ -1052,6 +802,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 				"%d - %u - %u",
 				i, segment, bit, config->indicator_bit_list[i]);
 			k_msleep(10);
+			return -EINVAL;
 		}
 
 		if (com != config->indicator_com_list[i]) {
@@ -1059,6 +810,7 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 				"%d - %u - %u",
 				i, segment, com, config->indicator_com_list[i]);
 			k_msleep(10);
+			return -EINVAL;
 		}
 	}
 
@@ -1070,34 +822,6 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 
 	/* Enable the PWR module clock (Power Control) */
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
-
-	/* Unlock the backup domain protection (Bit DBP in PWR_CR1) */
-	SET_BIT(PWR->CR1, PWR_CR1_DBP);
-
-	/* If LSE not yet set (LSERDY = 0), set it and switch it on */
-	if (READ_BIT(RCC->BDCR, RCC_BDCR_LSERDY) == 0) {
-
-		/* Set the driving capability to 3 (High -> bit 11 and 10 set to '1') */
-		MODIFY_REG(RCC->BDCR, RCC_BDCR_LSEDRV, (3U << RCC_BDCR_LSEDRV_Pos));
-
-		/* Switch on the extern clock LSE (LSEON) */
-		SET_BIT(RCC->BDCR, RCC_BDCR_LSEON);
-
-		/* In POST_KERNEL wait to allow the clock to start and get ready */
-		ST_SLCD_WAIT_FOR(success, READ_BIT(RCC->BDCR, RCC_BDCR_LSERDY) != 0,
-				 config->lcd_timeout_us, k_msleep(1));
-		if (!success) {
-			LOG_ERR("LSE not ready after cold start");
-			return -ETIMEDOUT;
-		}
-	}
-
-	/* Move the RTC/LCD to the LSE channel (RTCSEL = 0x01) */
-	if (READ_BIT(RCC->BDCR, RCC_BDCR_RTCSEL) != RCC_BDCR_RTCSEL_0) {
-		MODIFY_REG(RCC->BDCR, RCC_BDCR_RTCSEL, RCC_BDCR_RTCSEL_0);
-	}
-
-	LOG_DBG("LSE Ready!");
 
 	/* Remove the const qualifier in a maintainable way.
 	 * Any other way to cast it makes Sonarqube detect a "const drop" issue.
@@ -1123,82 +847,23 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 	k_busy_wait(2000);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_LCD);
 
-	/* Disable the peripheral */
-	auxdisplay_st_slcd_display_off(dev);
-
-	/* Clear the LCD RAM registers */
-	for (int i = 0; i < GH08172T_RAM_REG_COUNT; i++) {
-		sys_write32(0, ST_SLCD_RAM_ADDRESS(i));
-	}
-
-	/* Enable the display request */
-	sys_set_bits(config->lcd.sr, GH08172T_SR_UDR_MASK);
-
-	/* Hardware parameters tuning extracted directly from STM32Cube peripheral
-	 * specifications.
+	/* Initialize the LCD using the register boundaries configured within Devicetree and piping
+	 * them into the ST HAL struct. The hardware parameters are set according to the STM32Cube
+	 * peripheral specifications.
 	 */
-	struct gh08172t_init_data init = {
-		.prescaler = GH08172T_PRESCALER_1,
-		.divider = GH08172T_DIVIDER_31,
-		.blink_mode = GH08172T_BLINK_OFF,
-		.blink_frequency = GH08172T_BLINK_FREQ_DIV32,
-		.dead_time = GH08172T_DEADTIME_0,
-		.pulse_on_duration = GH08172T_PULSEONDURATION_4,
-		.contrast = GH08172T_CONTRASTLEVEL_5,
-		.high_drive = GH08172T_FCR_HIGH_DRIVE_DISABLE,
-		.duty = GH08172T_DUTY_1_4,
-		.bias = GH08172T_BIAS_1_3,
-		.voltage_source = GH08172T_CR_VSEL_INTERNAL,
-		.mux_segment = GH08172T_CR_MUX_SEG_DISABLE,
-	};
-
-	/* Configure the LCD in register FCR*/
-	uint32_t mask = GH08172T_FCR_PS_MASK | GH08172T_FCR_DIV_MASK | GH08172T_FCR_BLINK_MASK |
-			GH08172T_FCR_BLINK_FREQ_MASK | GH08172T_FCR_DEAD_MASK |
-			GH08172T_FCR_PON_MASK | GH08172T_FCR_CC_MASK | GH08172T_FCR_HIGH_DRIVE_MASK;
-	uint32_t val = init.prescaler | init.divider | init.blink_mode | init.blink_frequency |
-		       init.dead_time | init.pulse_on_duration | init.contrast | init.high_drive;
-	uint32_t current_val = sys_read32(config->lcd.fcr);
-	uint32_t new_val = (current_val & mask) | val;
-
-	sys_write32(new_val, config->lcd.fcr);
-
-	/* Loop until FCRSF flag is set */
-	ST_SLCD_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_FCRSR_MASK) != 0,
-			 config->lcd_timeout_us, k_msleep(1));
-	if (!success) {
-		LOG_ERR("Display init timeout A %u", config->lcd_timeout_us);
-		return -ETIMEDOUT;
+	hal_ret = HAL_LCD_Init(&data->hlcd);
+	if (hal_ret != HAL_OK) {
+		LOG_ERR("HAL_LCD_Init failed (hal ret: %d)", hal_ret);
+		/* LOG_DBG("RCC_BDCR=0x%08X, LCD_CR=0x%08X, LCD_SR=0x%08X, hal_ret=%d\n",
+		 * RCC->BDCR, LCD->CR, LCD->SR, hal_ret);
+		 */
+		return -EIO;
 	}
 
-	/* Configure the LCD in register CR */
-	mask = GH08172T_CR_DUTY_MASK | GH08172T_CR_BIAS_MASK | GH08172T_CR_VSEL_MASK |
-	       GH08172T_CR_MUX_SEG_MASK;
-	val = init.duty | init.bias | init.voltage_source | init.mux_segment;
-	current_val = sys_read32(config->lcd.cr);
-	new_val = (current_val & mask) | val;
-	sys_write32(new_val, config->lcd.cr);
+	/* Trigger hardware core initialization macros to start internal voltage pump generators. */
+	__HAL_LCD_ENABLE(&data->hlcd);
 
-	auxdisplay_st_slcd_display_on(dev);
-
-	/* Wait Until the LCD is enabled */
-	ST_SLCD_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_ENS_MASK) != 0,
-			 config->lcd_timeout_us, k_msleep(1));
-	if (!success) {
-		LOG_ERR("Display init timeout B");
-		return -ETIMEDOUT;
-	}
-
-	/* Wait Until the LCD Booster is ready */
-	ST_SLCD_WAIT_FOR(success, (sys_read32(config->lcd.sr) & GH08172T_SR_RDY_MASK) != 0,
-			 config->lcd_timeout_us, k_msleep(1));
-	if (!success) {
-		LOG_ERR("Display init timeout C");
-		return -ETIMEDOUT;
-	}
-
-	LOG_DBG("GH08172T driver initialized successfully with %d digits",
-		config->panel_config->capabilities.columns);
+	LOG_DBG("GH08172T driver initialized successfully with %d digits", config->position_count);
 	return 0;
 }
 
@@ -1212,6 +877,19 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 	static uint32_t                                                                            \
 		auxdisplay_st_slcd_data_ram_mask_buffers##inst[DT_INST_PROP_LEN(inst, com_list)];  \
 	static struct auxdisplay_st_slcd_data auxdisplay_st_slcd_data_##inst = {                   \
+		.hlcd.Instance = (LCD_TypeDef *)DT_INST_REG_ADDR(inst),                            \
+		.hlcd.Init.Duty = DT_INST_PROP(inst, lcd_duty),                                    \
+		.hlcd.Init.Bias = DT_INST_PROP(inst, lcd_bias),                                    \
+		.hlcd.Init.MuxSegment = DT_INST_PROP(inst, lcd_mux_segment),                       \
+		.hlcd.Init.VoltageSource = DT_INST_PROP(inst, lcd_voltage_source),                 \
+		.hlcd.Init.Prescaler = DT_INST_PROP(inst, lcd_prescaler),                          \
+		.hlcd.Init.Divider = DT_INST_PROP(inst, lcd_divider),                              \
+		.hlcd.Init.Contrast = DT_INST_PROP(inst, lcd_contrast),                            \
+		.hlcd.Init.PulseOnDuration = DT_INST_PROP(inst, lcd_pulse_on_duration),            \
+		.hlcd.Init.DeadTime = DT_INST_PROP(inst, lcd_dead_time),                           \
+		.hlcd.Init.HighDrive = DT_INST_PROP(inst, lcd_high_drive),                         \
+		.hlcd.Init.BlinkMode = DT_INST_PROP(inst, lcd_blink_mode),                         \
+		.hlcd.Init.BlinkFrequency = DT_INST_PROP(inst, lcd_blink_frequency),               \
 		.custom_character_patterns =                                                       \
 			auxdisplay_st_slcd_data_custom_character_patterns##inst,                   \
 		.ram_bits_buffers = auxdisplay_st_slcd_data_ram_bits_buffers##inst,                \
@@ -1234,16 +912,6 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 	static const uint8_t auxdisplay_st_slcd_indicator_com_list_##inst[] =                      \
 		DT_INST_PROP(inst, indicator_com_list);                                            \
 	static const struct auxdisplay_st_slcd_config auxdisplay_st_slcd_config_##inst = {         \
-		.lcd.cr = (mem_addr_t)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                 \
-				       GH08172T_CR_OFFSET),                                        \
-		.lcd.fcr = (mem_addr_t)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                \
-					GH08172T_FCR_OFFSET),                                      \
-		.lcd.sr = (mem_addr_t)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                 \
-				       GH08172T_SR_OFFSET),                                        \
-		.lcd.clr = (mem_addr_t)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                \
-					GH08172T_CLR_OFFSET),                                      \
-		.lcd.ram = (uint32_t *)(((unsigned char *)DT_INST_REG_ADDR(inst)) +                \
-					GH08172T_RAM_OFFSET),                                      \
 		.pclken = auxdisplay_st_slcd_pclken_##inst,                                        \
 		.clk_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR_BY_IDX(inst, 0)),                     \
 		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),                                    \
@@ -1255,7 +923,6 @@ static int auxdisplay_st_slcd_init(const struct device *dev)
 		.character_com_list = auxdisplay_st_slcd_character_com_list_##inst,                \
 		.indicator_bit_list = auxdisplay_st_slcd_indicator_bit_list_##inst,                \
 		.indicator_com_list = auxdisplay_st_slcd_indicator_com_list_##inst,                \
-		.lcd_timeout_us = 1000 * DT_INST_PROP(inst, lcd_timeout_ms),                       \
 		.custom_character_slot_count = DT_INST_PROP(inst, custom_character_slot_count),    \
 		.panel_config = &slcd_panel_config_##inst,                                         \
 		.position_count = slcd_panel_config_##inst.capabilities.rows *                     \

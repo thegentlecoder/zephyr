@@ -25,6 +25,9 @@
 		slcd: display-controller@40002400 {
 			compatible = "st,slcd";
 			reg = <0x40002400 0x400>;
+			lcd-duty = <0x0000000c>;
+			lcd-bias = <0x00000040>;
+			lcd-mux-segment = <0>;
 			clocks = <&rcc STM32_CLOCK(APB1, 24)>,
 				 <&rcc STM32_SRC_LSE RTC_SEL(1)>;
 			clock-names = "bus", "device";

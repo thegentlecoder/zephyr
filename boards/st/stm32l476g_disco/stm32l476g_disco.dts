@@ -180,6 +180,15 @@
 /* SLCD configuration */
 &slcd {
 	status = "disabled";
+	lcd-voltage-source = <0>;
+	lcd-prescaler = <0>;
+	lcd-divider = <0x003c0000>;
+	lcd-contrast = <0x00001400>;
+	lcd-pulse-on-duration = <0x00000040>;
+	lcd-dead-time = <0>;
+	lcd-high-drive = <0>;
+	lcd-blink-mode = <0>;
+	lcd-blink-frequency = <0x00004000>;
 	pinctrl-0 = <&lcd_seg3_pa6 &lcd_seg4_pa7 &lcd_com0_pa8
 		     &lcd_com1_pa9 &lcd_com2_pa10 &lcd_seg17_pa15
 		     &lcd_seg5_pb0 &lcd_seg6_pb1 &lcd_seg8_pb4
@@ -230,6 +239,5 @@
 			      (1 << 29) (1 << 29) (1 << 1) (1 << 1)
 			      (1 << 8) (1 << 8) (1 << 25) (1 << 25)>;
 	indicator-com-list = <6 4 6 4 6 4 7 5 6 4 6 4>;
-	lcd-timeout-ms = <1000>;
 	custom-character-slot-count = <32>;
 };
